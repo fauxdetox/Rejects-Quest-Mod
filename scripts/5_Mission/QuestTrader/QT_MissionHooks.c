@@ -308,24 +308,21 @@ modded class MissionGameplay
         m_qt_nearbyTraderId = closestId;
 
         // Fire interact on F press when near trader and menu not open
-        // Close quest menu with Escape
-        if (m_questMenu)
-        {
-            bool escPressed = GetGame().GetInput().LocalPress("UAUIBack", false);
-            if (!escPressed) escPressed = GetGame().GetInput().LocalPress("UAUIMenu", false);
-            if (escPressed)
-            {
-                GetGame().GetUIManager().HideScriptedMenu(m_questMenu);
-                m_questMenu = null;
-                if (m_qt_hintWidget && m_qt_nearbyTraderId != "") m_qt_hintWidget.Show(true);
-            }
-        }
-
         if (m_qt_nearbyTraderId != "" && !m_questMenu)
         {
             if (GetGame().GetInput().LocalPress("UAAction", false))
                 QT_RPCManager.RequestInteractTrader(m_qt_nearbyTraderId);
         }
+    }
+
+    void QT_CloseQuestMenu()
+    {
+        if (m_questMenu)
+        {
+            GetGame().GetUIManager().HideScriptedMenu(m_questMenu);
+            m_questMenu = null;
+        }
+        if (m_qt_hintWidget && m_qt_nearbyTraderId != "") m_qt_hintWidget.Show(true);
     }
 
     // Called by QT_DayZGameHook when the client receives an RPC
@@ -387,13 +384,11 @@ modded class MissionGameplay
             quests.Insert(entry);
         }
 
-        if (m_questMenu)
+        if (!m_questMenu)
         {
-            GetGame().GetUIManager().HideScriptedMenu(m_questMenu);
-            m_questMenu = null;
+            m_questMenu = new QT_QuestMenu();
+            GetGame().GetUIManager().ShowScriptedMenu(m_questMenu, null);
         }
-        m_questMenu = new QT_QuestMenu();
-        GetGame().GetUIManager().ShowScriptedMenu(m_questMenu, null);
         m_questMenu.SetQuestData(traderId, traderName, quests);
         if (m_qt_hintWidget) m_qt_hintWidget.Show(false);
     }

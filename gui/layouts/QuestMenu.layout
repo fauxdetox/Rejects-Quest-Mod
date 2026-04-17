@@ -1,173 +1,414 @@
 PanelWidgetClass root {
-	visible 1
-	ignorepointer 0
-	position 0 0
-	size 1 1
-	hexactpos 0
-	vexactpos 0
-	hexactsize 0
-	vexactsize 0
-	{
-		ImageWidgetClass FullscreenOverlay {
-			visible 1
-			ignorepointer 1
-			color 0 0 0 0.6
-			position 0 0
-			size 1 1
-			hexactpos 0
-			vexactpos 0
-			hexactsize 0
-			vexactsize 0
-			image gui/textures/white.edds
-		}
-		PanelWidgetClass QuestMenuBG {
-			visible 1
-			ignorepointer 0
-			color 0.03 0.03 0.03 0.97
-			position 0.05 0.03
-			size 0.9 0.94
-			hexactpos 0
-			vexactpos 0
-			hexactsize 0
-			vexactsize 0
-			{
-				TextWidgetClass NPCName {
-					visible 1
-					ignorepointer 1
-					color 1 0.85 0.3 1
-					position 0.01 0.01
-					size 0.98 0.05
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text ""
-					halign right_ref
-				}
-				TextWidgetClass TraderName {
-					visible 1
-					ignorepointer 1
-					color 0.75 0.75 0.75 1
-					position 0.01 0.07
-					size 0.98 0.05
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text ""
-					halign left_ref
-				}
-				ButtonWidgetClass BtnTabActive {
-					visible 1
-					ignorepointer 0
-					color 0.2 0.5 0.2 1
-					position 0.01 0.13
-					size 0.10 0.05
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text "Active"
-				}
-				ButtonWidgetClass BtnTabDone {
-					visible 1
-					ignorepointer 0
-					color 0.15 0.15 0.15 1
-					position 0.12 0.13
-					size 0.10 0.05
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text "Done"
-				}
-				TextListboxWidgetClass QuestList {
-					visible 1
-					ignorepointer 0
-					position 0.01 0.20
-					size 0.35 0.73
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					itemheight 28
-					font gui/fonts/condensed.fnt
-				}
-				MultilineTextWidgetClass DescText {
-					visible 1
-					ignorepointer 1
-					color 0.75 0.85 1 1
-					position 0.38 0.20
-					size 0.61 0.20
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text ""
-					font gui/fonts/condensed.fnt
-				}
-				MultilineTextWidgetClass ObjectivesText {
-					visible 1
-					ignorepointer 1
-					color 0.88 0.88 0.88 1
-					position 0.38 0.42
-					size 0.61 0.43
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text ""
-					font gui/fonts/condensed.fnt
-				}
-				ButtonWidgetClass BtnAccept {
-					visible 1
-					ignorepointer 0
-					color 0.2 0.7 0.2 1
-					position 0.38 0.87
-					size 0.14 0.06
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text "Accept"
-				}
-				ButtonWidgetClass BtnTurnIn {
-					visible 1
-					ignorepointer 0
-					color 0.2 0.4 0.8 1
-					position 0.53 0.87
-					size 0.14 0.06
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text "Turn In"
-				}
-				ButtonWidgetClass BtnCancel {
-					visible 1
-					ignorepointer 0
-					color 0.7 0.5 0.1 1
-					position 0.68 0.87
-					size 0.14 0.06
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text "Cancel"
-				}
-				ButtonWidgetClass BtnClose {
-					visible 1
-					ignorepointer 0
-					color 0.7 0.2 0.2 1
-					position 0.83 0.87
-					size 0.14 0.06
-					hexactpos 0
-					vexactpos 0
-					hexactsize 0
-					vexactsize 0
-					text "Close"
-				}
-			}
-		}
-	}
+ visible 1
+ ignorepointer 0
+ position 0 0
+ size 1 1
+ hexactpos 0
+ vexactpos 0
+ hexactsize 0
+ vexactsize 0
+ {
+  PanelWidgetClass QuestMenuBG {
+   visible 1
+   ignorepointer 0
+   color 0.196 0.196 0.196 0.973
+   size 0.8 0.8
+   halign center_ref
+   valign center_ref
+   hexactpos 0
+   vexactpos 0
+   hexactsize 0
+   vexactsize 0
+   style rover_sim_colorable
+   {
+    PanelWidgetClass TitleContainer {
+     visible 1
+     color 0.125 0.125 0.125 0.78
+     position 0 0
+     size 1 0.065
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style rover_sim_colorable
+     {
+      TextWidgetClass NPCName {
+       visible 1
+       ignorepointer 1
+       color 1 0.85 0.3 1
+       position 0.01 0
+       size 0.35 1
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "THE COLLECTOR"
+       "exact text" 1
+       "text valign" center
+      }
+      TextWidgetClass title_text {
+       size 0.3 1
+       halign center_ref
+       valign center_ref
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style Normal
+       text "QUESTS"
+       font "gui/fonts/sdf_MetronBook24"
+       "exact text" 1
+       "exact text size" 30
+       "size to text h" 0
+       "size to text v" 0
+       "text halign" center
+       "text valign" center
+      }
+      ButtonWidgetClass BtnClose {
+       color 0.384 0.082 0.11 1
+       position 0.97 0.2
+       size 0.02 0.5
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style Colorable
+       {
+        ImageWidgetClass BtnCloseImg {
+         ignorepointer 1
+         position 0 0
+         size 1 1
+         halign right_ref
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         image0 "set:dayz_gui image:Close"
+         mode blend
+         "src alpha" 1
+        }
+       }
+      }
+     }
+    }
+    PanelWidgetClass QuestListContainer {
+     visible 1
+     ignorepointer 1
+     color 0.125 0.125 0.125 1
+     position 0.01 0.08
+     size 0.35 0.91
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style rover_sim_colorable
+     {
+      PanelWidgetClass TabContainer {
+       ignorepointer 1
+       position 0 0
+       size 1 0.06
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       {
+        ButtonWidgetClass BtnTabActive {
+         color 0.2 0.2 0.2 1
+         position 0 0
+         size 0.33 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style DayZDefaultButtonNoBorder
+         text "ACTIVE"
+         text_proportion 0.5
+         font "gui/fonts/sdf_MetronBook24"
+        }
+        ButtonWidgetClass BtnTabDone {
+         color 0.2 0.2 0.2 1
+         position 0.33 0
+         size 0.33 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style DayZDefaultButtonNoBorder
+         text "DONE"
+         text_proportion 0.5
+         font "gui/fonts/sdf_MetronBook24"
+        }
+       }
+      }
+      TextListboxWidgetClass QuestList {
+       visible 1
+       ignorepointer 0
+       position 0 0.06
+       size 1 0.94
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       "title visible" 0
+       colums ""
+       font "gui"
+      }
+      PanelWidgetClass Separator6 {
+       visible 0
+       ignorepointer 1
+       color 0.506 0.506 0.506 0.506
+       position 0 0.93
+       size 1 0.003
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style rover_sim_colorable
+      }
+     }
+    }
+    PanelWidgetClass QuestDetailContainer {
+     visible 1
+     ignorepointer 1
+     position 0.37 0.08
+     size 0.62 0.91
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     {
+      PanelWidgetClass DescContainer {
+       ignorepointer 1
+       color 0.129 0.129 0.129 1
+       position 0 0
+       size 1 0.28
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style rover_sim_colorable
+       {
+        MultilineTextWidgetClass DescText {
+         visible 1
+         ignorepointer 1
+         color 0.75 0.85 1 1
+         position 0 0.1
+         size 1 0.9
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         text "Quest Description with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions"
+         font "gui"
+         "exact text" 1
+         wrap 1
+         "condense whitespace" 1
+        }
+        PanelWidgetClass PanelWidget1 {
+         ignorepointer 1
+         color 0.102 0.102 0.102 1
+         position 0 0
+         size 1 0.1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style rover_sim_colorable
+         {
+          TextWidgetClass TextWidget3 {
+           ignorepointer 1
+           size 1 1
+           hexactpos 0
+           vexactpos 0
+           hexactsize 0
+           vexactsize 0
+           style Bold
+           text "DESCRIPTION"
+           "exact text" 0
+           "text valign" center
+          }
+         }
+        }
+       }
+      }
+      PanelWidgetClass ObjContainer {
+       ignorepointer 1
+       color 0.129 0.129 0.129 1
+       position 0 0.29
+       size 1 0.28
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       scaled 1
+       draggable 0
+       style rover_sim_colorable
+       {
+        MultilineTextWidgetClass ObjectivesText {
+         visible 1
+         ignorepointer 1
+         color 0.88 0.88 0.88 1
+         position 0 0.1
+         size 1 0.9
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         text "This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives..."
+         font "gui"
+         "exact text" 1
+         wrap 1
+         "condense whitespace" 1
+        }
+        PanelWidgetClass PanelWidget0 {
+         ignorepointer 1
+         color 0.102 0.102 0.102 1
+         position 0 0
+         size 1 0.1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style rover_sim_colorable
+         {
+          TextWidgetClass TextWidget1 {
+           ignorepointer 1
+           size 1 1
+           hexactpos 0
+           vexactpos 0
+           hexactsize 0
+           vexactsize 0
+           style Bold
+           text "OBJECTIVES"
+           "exact text" 0
+           "text valign" center
+          }
+         }
+        }
+       }
+      }
+      PanelWidgetClass RewardContainer {
+       ignorepointer 1
+       color 0.129 0.129 0.129 1
+       position 0 0.58
+       size 1 0.28
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style rover_sim_colorable
+       {
+        MultilineTextWidgetClass RewardsText {
+         visible 1
+         ignorepointer 1
+         color 0.75 0.85 1 1
+         position 0 0.1
+         size 1 0.9
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         text "Quest \nDescription with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions"
+         font "gui"
+         "exact text" 1
+         wrap 1
+         "condense whitespace" 1
+        }
+        PanelWidgetClass PanelWidget2 {
+         ignorepointer 1
+         color 0.102 0.102 0.102 1
+         position 0 0
+         size 1 0.1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style rover_sim_colorable
+         {
+          TextWidgetClass TextWidget0 {
+           ignorepointer 1
+           size 1 1
+           hexactpos 0
+           vexactpos 0
+           hexactsize 0
+           vexactsize 0
+           style Bold
+           text "REWARDS"
+           "exact text" 0
+           "text valign" center
+          }
+         }
+        }
+       }
+      }
+      PanelWidgetClass ButtonsContainer1 {
+       ignorepointer 1
+       position 0 0.94
+       size 1 0.06
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       {
+        ButtonWidgetClass BtnAccept {
+         color 0.153 0.153 0.153 1
+         position 0 0
+         size 0.25 1
+         halign left_ref
+         valign bottom_ref
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style DayZDefaultButton
+         text "ACCEPT"
+         text_proportion 0.6
+         font "gui/fonts/sdf_MetronBook24"
+         "disabled text color" 0 0 0 0.902
+         "text sharpness" 1.3
+         switch normal
+        }
+        ButtonWidgetClass BtnComplete {
+         color 0.153 0.153 0.153 1
+         position 0.26 0
+         size 0.25 1
+         halign left_ref
+         valign bottom_ref
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style DayZDefaultButton
+         text "COMPLETE"
+         text_proportion 0.6
+         font "gui/fonts/sdf_MetronBook24"
+         "disabled text color" 0 0 0 0.902
+         "text sharpness" 1.3
+         switch normal
+        }
+        ButtonWidgetClass BtnCancel {
+         color 0.153 0.153 0.153 1
+         position 0.52 0
+         size 0.25 1
+         halign left_ref
+         valign bottom_ref
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style DayZDefaultButton
+         text "CANCEL"
+         text_proportion 0.6
+         font "gui/fonts/sdf_MetronBook24"
+         "disabled text color" 0 0 0 0.902
+         "text sharpness" 1.3
+         switch normal
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
 }

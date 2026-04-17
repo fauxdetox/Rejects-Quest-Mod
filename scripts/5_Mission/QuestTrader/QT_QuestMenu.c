@@ -39,8 +39,9 @@ class QT_QuestMenu : UIScriptedMenu
     private TextListboxWidget   m_questListBox;
     private MultilineTextWidget m_descText;
     private MultilineTextWidget m_detailText;
+    private MultilineTextWidget m_rewardsText;
     private ButtonWidget        m_acceptBtn;
-    private ButtonWidget        m_turnInBtn;
+    private ButtonWidget        m_completeBtn;
     private ButtonWidget        m_cancelBtn;
     private ButtonWidget        m_closeBtn;
     private ButtonWidget        m_tabActive;
@@ -65,15 +66,16 @@ class QT_QuestMenu : UIScriptedMenu
             return null;
         }
 
-        m_traderLabel  = TextWidget.Cast(layoutRoot.FindAnyWidget("TraderName"));
+        // m_traderLabel  = TextWidget.Cast(layoutRoot.FindAnyWidget("TraderName"));
         m_questListBox = TextListboxWidget.Cast(layoutRoot.FindAnyWidget("QuestList"));
         m_descText     = MultilineTextWidget.Cast(layoutRoot.FindAnyWidget("DescText"));
         m_detailText   = MultilineTextWidget.Cast(layoutRoot.FindAnyWidget("ObjectivesText"));
+        m_rewardsText  = MultilineTextWidget.Cast(layoutRoot.FindAnyWidget("RewardsText"));
         m_acceptBtn    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnAccept"));
-        m_turnInBtn    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTurnIn"));
+        m_completeBtn  = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnComplete"));
         m_cancelBtn    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnCancel"));
         m_closeBtn     = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnClose"));
-        Print("[QuestTrader] Buttons - accept=" + (m_acceptBtn != null) + " turnIn=" + (m_turnInBtn != null) + " cancel=" + (m_cancelBtn != null) + " close=" + (m_closeBtn != null));
+        Print("[QuestTrader] Buttons - accept=" + (m_acceptBtn != null) + " turnIn=" + (m_completeBtn != null) + " cancel=" + (m_cancelBtn != null) + " close=" + (m_closeBtn != null));
         m_tabActive    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabActive"));
         m_tabDone      = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabDone"));
         m_npcNameLabel = TextWidget.Cast(layoutRoot.FindAnyWidget("NPCName"));
@@ -111,8 +113,8 @@ class QT_QuestMenu : UIScriptedMenu
         m_allQuests.Clear();
         foreach (QT_QuestEntryUI e : quests) m_allQuests.Insert(e);
 
-        if (m_traderLabel && quests.Count() > 0)
-            m_traderLabel.SetText(quests[0].greeting);
+        // if (m_traderLabel && quests.Count() > 0)
+        //     m_traderLabel.SetText(quests[0].greeting);
 
         // Default to Active tab
         m_showingDoneTab = false;
@@ -158,6 +160,7 @@ class QT_QuestMenu : UIScriptedMenu
     {
         if (m_descText)   m_descText.SetText("");
         if (m_detailText) m_detailText.SetText("");
+        if (m_rewardsText) m_rewardsText.SetText("");
     }
 
     private string WordWrap(string text, int maxChars)
@@ -197,6 +200,17 @@ class QT_QuestMenu : UIScriptedMenu
         return result;
     }
 
+    private void CloseMenuSafely()
+    {
+        MissionGameplay mg = MissionGameplay.Cast(GetGame().GetMission());
+        if (mg)
+        {
+            mg.QT_CloseQuestMenu();
+            return;
+        }
+        Close();
+    }
+
     private void SelectQuest(int idx)
     {
         m_selectedIndex = idx;
@@ -209,9 +223,9 @@ class QT_QuestMenu : UIScriptedMenu
         if (e.state == QT_QuestState.TURNED_IN) stateStr = "Completed";
         if (e.state == QT_QuestState.COOLDOWN)  stateStr = "On cooldown";
 
-        if (m_descText) m_descText.SetText(WordWrap(e.description + "\n" + e.acceptMessage, 28));
+        if (m_descText) m_descText.SetText(e.description);
 
-        string detail = "Objectives:\n";
+        string detail = "";
         for (int o = 0; o < e.objectiveDescs.Count(); o++)
         {
             bool done = e.objectiveProgress[o] >= e.objectiveRequired[o];
@@ -222,8 +236,12 @@ class QT_QuestMenu : UIScriptedMenu
                 detail = detail + " (" + e.objectiveProgress[o] + "/" + e.objectiveRequired[o] + ")";
             detail = detail + "\n";
         }
-        detail = detail + "\nRewards:\n";
-        foreach (string rd : e.rewardDescs) detail = detail + "  " + rd + "\n";
+
+        string rewards = "";
+        foreach (string rd : e.rewardDescs)
+        {
+            rewards += rd + "\n";
+        }
         if (e.cooldownRemaining > 0)
         {
             int cdSecs = e.cooldownRemaining;
@@ -237,10 +255,19 @@ class QT_QuestMenu : UIScriptedMenu
             }
             string mStr = cdMins.ToString();
             cdStr = cdStr + mStr + "m";
-            detail = detail + "\nAvailable in: " + cdStr;
+            detail = detail + "\n\n Available in: " + cdStr;
         }
 
-        if (m_detailText) m_detailText.SetText(WordWrap(detail, 28));
+        if (m_detailText)
+        {
+            m_detailText.SetText(detail);
+        }
+
+        if (m_rewardsText)
+        {
+            m_rewardsText.SetText(rewards);
+        }
+
         UpdateButtons();
     }
 
@@ -287,7 +314,7 @@ class QT_QuestMenu : UIScriptedMenu
         }
 
         if (m_acceptBtn) m_acceptBtn.Enable(canAccept);
-        if (m_turnInBtn) m_turnInBtn.Enable(canTurnIn);
+        if (m_completeBtn) m_completeBtn.Enable(canTurnIn);
 
         // Cancel only available when quest is active
         bool canCancel = false;
@@ -312,6 +339,7 @@ class QT_QuestMenu : UIScriptedMenu
         {
             m_showingDoneTab = false;
             RefreshTab();
+            ClearDetail();
             return true;
         }
 
@@ -322,21 +350,21 @@ class QT_QuestMenu : UIScriptedMenu
             return true;
         }
 
-        if (w == m_closeBtn) { Close(); return true; }
+        if (w == m_closeBtn) { CloseMenuSafely(); return true; }
 
         if (w == m_acceptBtn && m_selectedIndex >= 0)
         {
             QT_QuestEntryUI entry = m_shownQuests[m_selectedIndex];
             QT_RPCManager.RequestAcceptQuest(entry.questId);
-            Close();
+            QT_RPCManager.RequestInteractTrader(m_traderId);
             return true;
         }
 
-        if (w == m_turnInBtn && m_selectedIndex >= 0)
+        if (w == m_completeBtn && m_selectedIndex >= 0)
         {
             QT_QuestEntryUI turnEntry = m_shownQuests[m_selectedIndex];
             QT_RPCManager.RequestTurnIn(turnEntry.questId, m_traderId);
-            Close();
+            QT_RPCManager.RequestInteractTrader(m_traderId);
             return true;
         }
 
@@ -344,7 +372,7 @@ class QT_QuestMenu : UIScriptedMenu
         {
             QT_QuestEntryUI cancelEntry = m_shownQuests[m_selectedIndex];
             QT_RPCManager.RequestCancelQuest(cancelEntry.questId);
-            Close();
+            QT_RPCManager.RequestInteractTrader(m_traderId);
             return true;
         }
 
@@ -373,14 +401,19 @@ class QT_QuestMenu : UIScriptedMenu
 
     override void Update(float timeslice)
     {
-        // Poll escape every frame - more reliable than OnKeyDown with focus issues
-        if (GetGame().GetInput().LocalPress("UAUIBack", false))
-            Close();
-    }
+        super.Update(timeslice);
 
-    override bool OnKeyDown(Widget w, int x, int y, int key)
-    {
-        if (key == KeyCode.KC_ESCAPE) { Close(); return true; }
-        return false;
+        // Update selected item when using arrow up and arrow down and mouse scroll
+        if (m_questListBox)
+        {
+            int sel = m_questListBox.GetSelectedRow();
+            if (sel >= 0 && sel < m_shownQuests.Count() && sel != m_selectedIndex)
+                SelectQuest(sel);
+        }
+
+        if (KeyState(KeyCode.KC_ESCAPE) == 1)
+        {
+			CloseMenuSafely();
+        }
     }
 }
