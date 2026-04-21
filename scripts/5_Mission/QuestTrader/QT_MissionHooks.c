@@ -28,6 +28,7 @@ modded class MissionServer
         QT_Logger.GetInstance();
         QT_QuestHistory.GetInstance();
         QT_QuestManager.GetInstance();
+        QT_TraderMarker.GetInstance();
         Print("[QuestTrader] MissionServer OnInit complete.");
     }
 
@@ -76,6 +77,7 @@ modded class MissionServer
         if (GetGame().IsServer())
         {
             QT_QuestManager.GetInstance().SaveAll();
+            QT_TraderMarker.GetInstance().DeleteMarker();
             QT_Logger.GetInstance().Info("SYSTEM", "Mission finished - final save done.");
         }
     }
