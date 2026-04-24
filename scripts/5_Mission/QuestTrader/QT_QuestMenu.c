@@ -18,6 +18,7 @@ class QT_QuestEntryUI
     ref array<int>    objectiveRequired;
     ref array<int>    objectiveProgress;
     ref array<string> rewardDescs;
+    ref array<string> prereqTitles;
 
     void QT_QuestEntryUI()
     {
@@ -25,6 +26,7 @@ class QT_QuestEntryUI
         objectiveRequired = new array<int>();
         objectiveProgress = new array<int>();
         rewardDescs       = new array<string>();
+        prereqTitles      = new array<string>();
     }
 }
 
@@ -273,6 +275,17 @@ class QT_QuestMenu : UIScriptedMenu
         if (e.state == QT_QuestState.COOLDOWN)  stateStr = "On cooldown";
 
         if (m_descText) m_descText.SetText(e.description);
+
+        // If quest has unmet prerequisites, show them prominently
+        if (e.prereqTitles && e.prereqTitles.Count() > 0 && e.state == QT_QuestState.AVAILABLE && e.cooldownRemaining == 0)
+        {
+            // Check if any prereqs are unmet by seeing if accept is blocked
+            // We show prereqs always when they exist so player knows the chain
+            string prereqStr = "\n\nRequires:\n";
+            foreach (string pt : e.prereqTitles)
+                prereqStr = prereqStr + "  - " + pt + "\n";
+            if (m_descText) m_descText.SetText(e.description + prereqStr);
+        }
 
         string detail = "";
         for (int o = 0; o < e.objectiveDescs.Count(); o++)

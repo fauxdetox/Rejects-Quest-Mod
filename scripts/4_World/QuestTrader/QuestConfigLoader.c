@@ -16,11 +16,13 @@ class QT_ItemSettings
 {
     ref array<string> QuantityCountedItems;
     ref array<string> StackableRewardItems;
+    ref array<string> DeerKillAliases;
 
     void QT_ItemSettings()
     {
         QuantityCountedItems = new array<string>();
         StackableRewardItems = new array<string>();
+        DeerKillAliases      = new array<string>();
     }
 }
 
@@ -96,6 +98,9 @@ class QT_ItemSettingsLoader
         s.StackableRewardItems.Insert("Rag");
         s.StackableRewardItems.Insert("WoodenPlank");
         s.StackableRewardItems.Insert("PurificationTablets");
+        // Kill aliases — deer quest counts any of these
+        s.DeerKillAliases.Insert("CervusElaphus");
+        s.DeerKillAliases.Insert("CapreolusCapreolus");
         return s;
     }
 

@@ -166,7 +166,7 @@
       "cooldownHours": 12,
       "objectives": [
         {
-          "entityClassName": "CervusElaphus",
+          "entityClassName": "Deer",
           "requiredAmount": 2,
           "description": "Kill 2 Deer"
         }
@@ -714,7 +714,7 @@
       "cooldownHours": 12,
       "objectives": [
         {
-          "entityClassName": "CervusElaphus",
+          "entityClassName": "Deer",
           "requiredAmount": 4,
           "description": "Kill 4 Deer"
         }
@@ -1539,7 +1539,7 @@
       "cooldownHours": 12,
       "objectives": [
         {
-          "entityClassName": "CervusElaphus",
+          "entityClassName": "Deer",
           "requiredAmount": 3,
           "description": "Kill 3 Deer"
         }
@@ -1916,7 +1916,7 @@
       "cooldownHours": 0,
       "objectives": [
         {
-          "itemClassName": "Map",
+          "itemClassName": "ChernarusMap",
           "requiredAmount": 1,
           "description": "Find a Map"
         },
@@ -2170,7 +2170,7 @@
       "cooldownHours": 24,
       "objectives": [
         {
-          "itemClassName": "Disinfectant",
+          "itemClassName": "DisinfectantSpray",
           "requiredAmount": 3,
           "description": "Collect 3 Disinfectant Sprays"
         },
@@ -2554,7 +2554,7 @@
           "amount": 3
         },
         {
-          "itemClassName": "Disinfectant",
+          "itemClassName": "DisinfectantSpray",
           "amount": 3
         }
       ],

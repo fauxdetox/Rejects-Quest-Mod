@@ -122,6 +122,16 @@ class QT_RPCManager
                 rpc.Write(rew.itemClassName);
                 rpc.Write(rew.amount);
             }
+
+            // Send prerequisite quest titles so client can display them
+            rpc.Write(def.prerequisiteQuestIds.Count());
+            foreach (string preId : def.prerequisiteQuestIds)
+            {
+                QT_QuestDef preDef = mgr.GetQuestDef(preId);
+                string preTitle = preId;
+                if (preDef) preTitle = preDef.title;
+                rpc.Write(preTitle);
+            }
         }
 
         rpc.Send(player, QT_RPC.SEND_QUEST_LIST, true, player.GetIdentity());

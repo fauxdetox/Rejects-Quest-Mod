@@ -454,7 +454,23 @@ class QT_QuestManager
             foreach (int idx, QT_Objective obj : def.objectives)
             {
                 if (obj.entityClassName == "") continue;
-                if (!victimClass.Contains(obj.entityClassName)) continue;
+
+                // Check if this kill matches the objective
+                bool matched = false;
+                if (obj.entityClassName == "Deer" && m_itemSettings)
+                {
+                    // Any deer variant counts
+                    foreach (string alias : m_itemSettings.DeerKillAliases)
+                    {
+                        if (victimClass.Contains(alias)) { matched = true; break; }
+                    }
+                }
+                else
+                {
+                    matched = victimClass.Contains(obj.entityClassName);
+                }
+
+                if (!matched) continue;
                 int cur = qs.objectiveProgress[idx];
                 if (cur >= obj.requiredAmount) continue;
                 qs.objectiveProgress.Set(idx, cur + 1);

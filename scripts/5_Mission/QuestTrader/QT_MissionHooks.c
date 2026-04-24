@@ -36,6 +36,9 @@ modded class MissionServer
         super.OnMissionStart();
         if (!GetGame().IsServer()) return;
 
+        // Initialise marker singleton before spawning so markers are created on spawn
+        QT_TraderMarker.GetInstance();
+
         // Spawn NPCs here - world is fully loaded
         m_traderSpawner = new QT_TraderSpawner();
         m_traderSpawner.SpawnAll(QT_QuestManager.GetInstance().GetConfig());
@@ -77,6 +80,7 @@ modded class MissionServer
         {
             QT_QuestManager.GetInstance().SaveAll();
             QT_Logger.GetInstance().Info("SYSTEM", "Mission finished - final save done.");
+            QT_TraderMarker.GetInstance().DeleteMarker();
         }
     }
 
@@ -378,6 +382,15 @@ modded class MissionGameplay
                 string rewClass; int rewAmt;
                 ctx.Read(rewClass); ctx.Read(rewAmt);
                 entry.rewardDescs.Insert(rewAmt.ToString() + "x " + rewClass);
+            }
+
+            int prereqCount;
+            ctx.Read(prereqCount);
+            for (int pr = 0; pr < prereqCount; pr++)
+            {
+                string preTitle;
+                ctx.Read(preTitle);
+                entry.prereqTitles.Insert(preTitle);
             }
 
             entry.greeting = greeting;

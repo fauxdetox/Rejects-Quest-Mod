@@ -109,6 +109,9 @@ class QT_TraderSpawner
         string className = ResolveClassName(def.model);
 
         vector spawnPos = def.position;
+
+        QT_TraderMarker.GetInstance().CreateMarker(def);
+
         float groundY = GetGame().SurfaceY(spawnPos[0], spawnPos[2]);
         spawnPos[1] = groundY;
 
