@@ -6,7 +6,9 @@
     "CharcoalTablets",
     "Rag",
     "WoodenPlank",
-    "PurificationTablets"
+    "PurificationTablets",
+	"Worm",
+	"Netting"
   ],
   "StackableRewardItems": [
     "MoneyRuble1",

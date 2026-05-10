@@ -1,0 +1,168 @@
+PanelWidgetClass root {
+ visible 1
+ ignorepointer 0
+ position 0 0
+ size 1 1
+ hexactpos 0
+ vexactpos 0
+ hexactsize 0
+ vexactsize 0
+ {
+  PanelWidgetClass Overlay {
+   visible 1
+   ignorepointer 1
+   color 0 0 0 0.80
+   position 0 0
+   size 1 1
+   hexactpos 0
+   vexactpos 0
+   hexactsize 0
+   vexactsize 0
+   style rover_sim_colorable
+  }
+  PanelWidgetClass BookPanel {
+   visible 1
+   ignorepointer 0
+   color 0.18 0.13 0.09 1
+   position 0.15 0.05
+   size 0.70 0.90
+   hexactpos 0
+   vexactpos 0
+   hexactsize 0
+   vexactsize 0
+   {
+    PanelWidgetClass PageBG {
+     visible 1
+     ignorepointer 1
+     color 0.82 0.74 0.60 1
+     position 0.02 0.02
+     size 0.96 0.96
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style rover_sim_colorable
+    }
+    PanelWidgetClass Spine {
+     visible 1
+     ignorepointer 1
+     color 0.35 0.22 0.12 1
+     position 0.495 0.02
+     size 0.01 0.96
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style rover_sim_colorable
+    }
+    TextWidgetClass JournalTitle {
+     visible 1
+     ignorepointer 1
+     color 0.25 0.15 0.05 1
+     position 0.03 0.02
+     size 0.94 0.06
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     text "#QuestTrader_JOURNAL_TITLE"
+     font "RobotoCondensed"
+     halign center_ref
+    }
+    PanelWidgetClass TitleDivider {
+     visible 1
+     ignorepointer 1
+     color 0.35 0.22 0.12 1
+     position 0.03 0.088
+     size 0.94 0.002
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style rover_sim_colorable
+    }
+    ScrollWidgetClass JournalScrollLeft {
+     visible 1
+     ignorepointer 0
+     position 0.03 0.095
+     size 0.44 0.845
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     {
+      MultilineTextWidgetClass JournalText {
+       visible 1
+       ignorepointer 1
+       color 0.18 0.10 0.04 1
+       position 0 0
+       size 400 3000
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       text ""
+       font "gui"
+       multiline 1
+       "wrap width" 390
+      }
+     }
+    }
+    ScrollWidgetClass JournalScrollRight {
+     visible 1
+     ignorepointer 0
+     position 0.525 0.095
+     size 0.44 0.845
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     {
+      MultilineTextWidgetClass JournalTextRight {
+       visible 1
+       ignorepointer 1
+       color 0.18 0.10 0.04 1
+       position 0 0
+       size 400 3000
+       hexactpos 1
+       vexactpos 1
+       hexactsize 1
+       vexactsize 1
+       text ""
+       font "gui"
+       multiline 1
+       "wrap width" 390
+      }
+     }
+    }
+    TextWidgetClass HintText {
+     visible 1
+     ignorepointer 1
+     color 0.40 0.28 0.15 1
+     position 0.03 0.945
+     size 0.94 0.04
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     text "#QuestTrader_JOURNAL_HINT"
+     font "RobotoCondensed"
+     halign center_ref
+    }
+    ButtonWidgetClass BtnCloseJournal {
+     visible 1
+     ignorepointer 0
+     color 0.35 0.22 0.12 1
+     position 0.87 0.02
+     size 0.10 0.055
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "X"
+    }
+   }
+  }
+ }
+}

@@ -7,11 +7,13 @@
 class QT_QuestEntryUI
 {
     string questId;
+    string traderId;
     string title;
     string description;
     int    type;
     int    state;
     string acceptMessage;
+    string rewardMessage;
     int    cooldownRemaining;
     string greeting;
     ref array<string> objectiveDescs;
@@ -33,10 +35,13 @@ class QT_QuestEntryUI
 class QT_QuestMenu : UIScriptedMenu
 {
     private string m_traderId;
+    private string m_traderName;
+
+    string GetTraderName() { return m_traderName; }
     private ref array<ref QT_QuestEntryUI> m_allQuests;   // full list from server
     private ref array<ref QT_QuestEntryUI> m_shownQuests; // currently shown in listbox
     private int    m_selectedIndex;
-    private bool   m_showingDoneTab;
+    private int    m_currentTab;
 
     private TextListboxWidget   m_questListBox;
     private MultilineTextWidget m_descText;
@@ -47,18 +52,23 @@ class QT_QuestMenu : UIScriptedMenu
     private ButtonWidget        m_cancelBtn;
     private ButtonWidget        m_closeBtn;
     private ButtonWidget        m_tabActive;
+    private ButtonWidget        m_tabNow;
     private ButtonWidget        m_tabDone;
     private TextWidget          m_traderLabel;
     private TextWidget          m_npcNameLabel;
     private float               m_tickTimer;       // accumulates delta time
     private static const float  TICK_INTERVAL = 1.0; // refresh every second
+    private static const int    TAB_AVAILABLE = 0;
+    private static const int    TAB_NOW       = 1;
+    private static const int    TAB_DONE      = 2;
+    private static const int    QUEST_LIST_MAX_CHARS = 30;
 
     void QT_QuestMenu()
     {
         m_allQuests    = new array<ref QT_QuestEntryUI>();
         m_shownQuests  = new array<ref QT_QuestEntryUI>();
         m_selectedIndex   = -1;
-        m_showingDoneTab  = false;
+        m_currentTab      = TAB_AVAILABLE;
     }
 
     override Widget Init()
@@ -81,11 +91,27 @@ class QT_QuestMenu : UIScriptedMenu
         m_closeBtn     = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnClose"));
         Print("[QuestTrader] Buttons - accept=" + (m_acceptBtn != null) + " turnIn=" + (m_completeBtn != null) + " cancel=" + (m_cancelBtn != null) + " close=" + (m_closeBtn != null));
         m_tabActive    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabActive"));
+        m_tabNow       = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabNow"));
         m_tabDone      = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabDone"));
         m_npcNameLabel = TextWidget.Cast(layoutRoot.FindAnyWidget("NPCName"));
 
+        ApplyLocalization();
         Print("[QuestTrader] QuestMenu ready.");
         return layoutRoot;
+    }
+
+    private void ApplyLocalization()
+    {
+        QT_L10n.ApplyText(layoutRoot, "title_text", "MENU_TITLE");
+        QT_L10n.ApplyText(layoutRoot, "BtnTabActive", "MENU_AVAILABLE");
+        QT_L10n.ApplyText(layoutRoot, "BtnTabNow", "MENU_NOW");
+        QT_L10n.ApplyText(layoutRoot, "BtnTabDone", "MENU_DONE");
+        QT_L10n.ApplyText(layoutRoot, "TextWidget3", "MENU_DESCRIPTION");
+        QT_L10n.ApplyText(layoutRoot, "TextWidget1", "MENU_OBJECTIVES");
+        QT_L10n.ApplyText(layoutRoot, "TextWidget0", "MENU_REWARDS");
+        QT_L10n.ApplyText(layoutRoot, "BtnAccept", "BUTTON_ACCEPT");
+        QT_L10n.ApplyText(layoutRoot, "BtnComplete", "BUTTON_COMPLETE");
+        QT_L10n.ApplyText(layoutRoot, "BtnCancel", "BUTTON_CANCEL");
     }
 
     override void OnShow()
@@ -121,6 +147,7 @@ class QT_QuestMenu : UIScriptedMenu
             m_tickTimer = 0;
 
             bool anyChanged = false;
+            bool tabNeedsRefresh = false;
             foreach (QT_QuestEntryUI q : m_allQuests)
             {
                 if (q.cooldownRemaining > 0)
@@ -130,9 +157,16 @@ class QT_QuestMenu : UIScriptedMenu
                     {
                         q.cooldownRemaining = 0;
                         q.state = QT_QuestState.AVAILABLE;
+                        tabNeedsRefresh = true;
                     }
                     anyChanged = true;
                 }
+            }
+
+            if (tabNeedsRefresh)
+            {
+                RefreshTab();
+                return;
             }
 
             if (anyChanged && m_selectedIndex >= 0 && m_selectedIndex < m_shownQuests.Count())
@@ -159,7 +193,8 @@ class QT_QuestMenu : UIScriptedMenu
 
     void SetQuestData(string traderId, string traderName, array<ref QT_QuestEntryUI> quests)
     {
-        m_traderId = traderId;
+        m_traderId   = traderId;
+        m_traderName = traderName;
         if (m_npcNameLabel) m_npcNameLabel.SetText(traderName);
         m_allQuests.Clear();
         foreach (QT_QuestEntryUI e : quests) m_allQuests.Insert(e);
@@ -167,29 +202,32 @@ class QT_QuestMenu : UIScriptedMenu
         // if (m_traderLabel && quests.Count() > 0)
         //     m_traderLabel.SetText(quests[0].greeting);
 
-        // Default to Active tab
-        m_showingDoneTab = false;
+        // Default to available quests
+        m_currentTab = TAB_AVAILABLE;
         RefreshTab();
     }
 
     private void RefreshTab()
     {
-        // Highlight active tab
-        if (m_tabActive) m_tabActive.SetColor(ARGB(255, 50, 130, 50));
+        if (m_tabActive) m_tabActive.SetColor(ARGB(255, 40, 40, 40));
+        if (m_tabNow)    m_tabNow.SetColor(ARGB(255, 40, 40, 40));
         if (m_tabDone)   m_tabDone.SetColor(ARGB(255, 40, 40, 40));
-        if (m_showingDoneTab)
-        {
-            if (m_tabActive) m_tabActive.SetColor(ARGB(255, 40, 40, 40));
-            if (m_tabDone)   m_tabDone.SetColor(ARGB(255, 50, 80, 130));
-        }
+        if (m_currentTab == TAB_AVAILABLE && m_tabActive) m_tabActive.SetColor(ARGB(255, 50, 130, 50));
+        if (m_currentTab == TAB_NOW && m_tabNow)          m_tabNow.SetColor(ARGB(255, 130, 100, 40));
+        if (m_currentTab == TAB_DONE && m_tabDone)        m_tabDone.SetColor(ARGB(255, 50, 80, 130));
 
         m_shownQuests.Clear();
         if (m_questListBox) m_questListBox.ClearItems();
 
         foreach (QT_QuestEntryUI q : m_allQuests)
         {
-            bool isDone = (q.state == QT_QuestState.TURNED_IN);
-            if (m_showingDoneTab != isDone) continue;
+            bool isAvailable = (q.state == QT_QuestState.AVAILABLE && q.cooldownRemaining == 0);
+            bool isNow = (q.state == QT_QuestState.ACTIVE || q.state == QT_QuestState.COMPLETED);
+            bool isDone = (q.state == QT_QuestState.TURNED_IN || q.state == QT_QuestState.COOLDOWN);
+
+            if (m_currentTab == TAB_AVAILABLE && !isAvailable) continue;
+            if (m_currentTab == TAB_NOW && !isNow) continue;
+            if (m_currentTab == TAB_DONE && !isDone) continue;
 
             string prefix = "- ";
             if (q.state == QT_QuestState.ACTIVE)    prefix = "> ";
@@ -198,7 +236,7 @@ class QT_QuestMenu : UIScriptedMenu
             if (q.state == QT_QuestState.TURNED_IN) prefix = "* ";
 
             m_shownQuests.Insert(q);
-            if (m_questListBox) m_questListBox.AddItem(prefix + q.title, null, 0);
+            if (m_questListBox) m_questListBox.AddItem(prefix + FitListText(q.title, QUEST_LIST_MAX_CHARS), null, 0);
         }
 
         m_selectedIndex = -1;
@@ -251,6 +289,13 @@ class QT_QuestMenu : UIScriptedMenu
         return result;
     }
 
+    private string FitListText(string text, int maxChars)
+    {
+        if (text.Length() <= maxChars) return text;
+        if (maxChars <= 3) return text.Substring(0, maxChars);
+        return text.Substring(0, maxChars - 3) + "...";
+    }
+
     private void CloseMenuSafely()
     {
         MissionGameplay mg = MissionGameplay.Cast(GetGame().GetMission());
@@ -268,41 +313,66 @@ class QT_QuestMenu : UIScriptedMenu
         if (idx < 0 || idx >= m_shownQuests.Count()) return;
         QT_QuestEntryUI e = m_shownQuests[idx];
 
-        string stateStr = "Available";
-        if (e.state == QT_QuestState.ACTIVE)    stateStr = "Active";
-        if (e.state == QT_QuestState.COMPLETED) stateStr = "Ready to turn in!";
-        if (e.state == QT_QuestState.TURNED_IN) stateStr = "Completed";
-        if (e.state == QT_QuestState.COOLDOWN)  stateStr = "On cooldown";
+        string stateStr = QT_L10n.T("STATE_AVAILABLE");
+        if (e.state == QT_QuestState.ACTIVE)    stateStr = QT_L10n.T("STATE_ACTIVE");
+        if (e.state == QT_QuestState.COMPLETED) stateStr = QT_L10n.T("STATE_READY");
+        if (e.state == QT_QuestState.TURNED_IN) stateStr = QT_L10n.T("STATE_COMPLETED");
+        if (e.state == QT_QuestState.COOLDOWN)  stateStr = QT_L10n.T("STATE_COOLDOWN");
 
-        if (m_descText) m_descText.SetText(e.description);
-
-        // If quest has unmet prerequisites, show them prominently
-        if (e.prereqTitles && e.prereqTitles.Count() > 0 && e.state == QT_QuestState.AVAILABLE && e.cooldownRemaining == 0)
+        // Show reward message when quest is ready to turn in or already turned in
+        if ((e.state == QT_QuestState.COMPLETED || e.state == QT_QuestState.TURNED_IN) && e.rewardMessage != "")
         {
-            // Check if any prereqs are unmet by seeing if accept is blocked
-            // We show prereqs always when they exist so player knows the chain
-            string prereqStr = "\n\nRequires:\n";
-            foreach (string pt : e.prereqTitles)
-                prereqStr = prereqStr + "  - " + pt + "\n";
-            if (m_descText) m_descText.SetText(e.description + prereqStr);
+            if (m_descText) m_descText.SetText(e.title + "\n\n" + e.rewardMessage);
+        }
+        else
+        {
+            string descFull = e.title + "\n\n" + e.description;
+
+            // If quest has prerequisites, append with divider
+            if (e.prereqTitles && e.prereqTitles.Count() > 0 && e.state == QT_QuestState.AVAILABLE && e.cooldownRemaining == 0)
+            {
+                string prereqStr = "\n\n--------------------------------\n" + QT_L10n.T("REQUIRES") + ":\n";
+                foreach (string pt : e.prereqTitles)
+                    prereqStr = prereqStr + "  - " + pt + "\n";
+                descFull = descFull + prereqStr;
+            }
+
+            if (m_descText) m_descText.SetText(descFull);
         }
 
         string detail = "";
+        bool allCollectItemsReady = (e.type == QT_QuestType.COLLECT && e.state == QT_QuestState.ACTIVE && e.objectiveRequired.Count() > 0);
+        bool allDeliveryItemsReady = (e.type == QT_QuestType.DELIVER && e.state == QT_QuestState.ACTIVE && e.objectiveRequired.Count() > 0);
         for (int o = 0; o < e.objectiveDescs.Count(); o++)
         {
-            bool done = e.objectiveProgress[o] >= e.objectiveRequired[o];
+            int objectiveProgress = 0;
+            int objectiveRequired = 1;
+            if (o < e.objectiveProgress.Count()) objectiveProgress = e.objectiveProgress[o];
+            if (o < e.objectiveRequired.Count()) objectiveRequired = e.objectiveRequired[o];
+            bool done = objectiveProgress >= objectiveRequired;
+            if (!done)
+            {
+                allCollectItemsReady = false;
+                allDeliveryItemsReady = false;
+            }
             string tick = "[ ] ";
             if (done) tick = "[x] ";
-            detail = detail + tick + e.objectiveDescs[o];
-            if (e.type == QT_QuestType.KILL)
-                detail = detail + " (" + e.objectiveProgress[o] + "/" + e.objectiveRequired[o] + ")";
+            detail = detail + tick + QT_L10n.ResolveText(e.objectiveDescs[o]);
+            if (o < e.objectiveProgress.Count())
+                detail = detail + " (" + objectiveProgress + "/" + objectiveRequired + ")";
+            if ((e.type == QT_QuestType.COLLECT || e.type == QT_QuestType.DELIVER) && done)
+                detail = detail + " - " + QT_L10n.T("OBJECTIVE_READY");
             detail = detail + "\n";
         }
+        if (allCollectItemsReady)
+            detail = detail + "\n" + QT_L10n.T("OBJECTIVES_ALL_READY") + "\n";
+        if (allDeliveryItemsReady)
+            detail = detail + "\n" + QT_L10n.T("DELIVERY_ALL_READY") + "\n";
 
         string rewards = "";
         foreach (string rd : e.rewardDescs)
         {
-            rewards += rd + "\n";
+            rewards += QT_L10n.ResolveText(rd) + "\n";
         }
 
         if (e.cooldownRemaining > 0)
@@ -316,12 +386,13 @@ class QT_QuestMenu : UIScriptedMenu
             if (cdMins > 0 || cdHours > 0) cdStr = cdStr + cdMins.ToString() + "m ";
             cdStr = cdStr + cdSecsOnly.ToString() + "s";
 
-            // Show cooldown prominently in description, and in objectives if there's content
-            if (m_descText) m_descText.SetText(e.description + "\n\nAvailable in: " + cdStr);
+            // Show cooldown with divider at bottom of description
+            string availableIn = QT_L10n.T("AVAILABLE_IN") + ": " + cdStr;
+            if (m_descText) m_descText.SetText(e.title + "\n\n" + e.description + "\n\n--------------------------------\n" + availableIn);
             if (detail == "")
-                detail = "Available in: " + cdStr;
+                detail = availableIn;
             else
-                detail = detail + "\nAvailable in: " + cdStr;
+                detail = detail + "\n" + availableIn;
         }
 
         if (m_detailText)
@@ -346,11 +417,12 @@ class QT_QuestMenu : UIScriptedMenu
         {
             QT_QuestEntryUI e = m_shownQuests[m_selectedIndex];
             canAccept = (e.state == QT_QuestState.AVAILABLE && e.cooldownRemaining == 0);
-            // Disable Accept if any quest is already active across all lists
+            // Allow one active/ready quest per origin trader.
             if (canAccept)
             {
                 foreach (QT_QuestEntryUI anyQ : m_allQuests)
                 {
+                    if (anyQ.traderId != e.traderId) continue;
                     if (anyQ.state == QT_QuestState.ACTIVE || anyQ.state == QT_QuestState.COMPLETED)
                     {
                         canAccept = false;
@@ -374,9 +446,19 @@ class QT_QuestMenu : UIScriptedMenu
                 if (allMet) canTurnIn = true;
             }
 
-            // Delivery quest: enable Turn In when active (player has the item)
+            // Delivery quest: enable Turn In only when the required item is present.
             if (!canTurnIn && e.state == QT_QuestState.ACTIVE && e.type == QT_QuestType.DELIVER)
-                canTurnIn = true;
+            {
+                bool allDeliveryMet = (e.objectiveRequired.Count() > 0);
+                for (int di = 0; di < e.objectiveRequired.Count(); di++)
+                {
+                    int deliveryProg = 0;
+                    int deliveryReq = e.objectiveRequired[di];
+                    if (di < e.objectiveProgress.Count()) deliveryProg = e.objectiveProgress[di];
+                    if (deliveryProg < deliveryReq) { allDeliveryMet = false; break; }
+                }
+                if (allDeliveryMet) canTurnIn = true;
+            }
         }
 
         if (m_acceptBtn) m_acceptBtn.Enable(canAccept);
@@ -403,7 +485,15 @@ class QT_QuestMenu : UIScriptedMenu
 
         if (w == m_tabActive)
         {
-            m_showingDoneTab = false;
+            m_currentTab = TAB_AVAILABLE;
+            RefreshTab();
+            ClearDetail();
+            return true;
+        }
+
+        if (w == m_tabNow)
+        {
+            m_currentTab = TAB_NOW;
             RefreshTab();
             ClearDetail();
             return true;
@@ -411,7 +501,7 @@ class QT_QuestMenu : UIScriptedMenu
 
         if (w == m_tabDone)
         {
-            m_showingDoneTab = true;
+            m_currentTab = TAB_DONE;
             RefreshTab();
             return true;
         }

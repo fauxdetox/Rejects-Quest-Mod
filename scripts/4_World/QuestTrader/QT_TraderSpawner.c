@@ -13,6 +13,8 @@
 
 class QT_TraderSpawner
 {
+    private static ref QT_TraderSpawner s_activeSpawner;
+
     // Static map: entity low ID -> trader definition id
     // Populated at spawn, checked in ActionInteractTrader
     static ref map<int, string> s_entityToTrader   = new map<int, string>();
@@ -21,13 +23,26 @@ class QT_TraderSpawner
 
     private ref array<Object>         m_spawnedNPCs;
     private ref array<ref QT_TraderDef> m_traderDefs; // parallel array to m_spawnedNPCs
+    private ref array<ref QT_TraderDef> m_pendingSpawnDefs;
+    private int                       m_pendingSpawnIndex;
     private float                     m_respawnTimer;
     private static const float        RESPAWN_CHECK_INTERVAL = 30.0; // seconds
+    private static const int          SPAWN_BATCH_SIZE = 3;
+
+    static QT_TraderSpawner GetActiveSpawner()
+    {
+        if (!s_activeSpawner)
+            s_activeSpawner = new QT_TraderSpawner();
+        return s_activeSpawner;
+    }
 
     void QT_TraderSpawner()
     {
+        s_activeSpawner = this;
         m_spawnedNPCs  = new array<Object>();
         m_traderDefs   = new array<ref QT_TraderDef>();
+        m_pendingSpawnDefs = new array<ref QT_TraderDef>();
+        m_pendingSpawnIndex = 0;
         m_respawnTimer = 0;
     }
 
@@ -40,6 +55,8 @@ class QT_TraderSpawner
 
     void DespawnAll()
     {
+        QT_TraderMarker.GetInstance().DeleteMarker();
+
         foreach (Object obj : m_spawnedNPCs)
         {
             if (obj) GetGame().ObjectDelete(obj);
@@ -49,6 +66,37 @@ class QT_TraderSpawner
         s_entityToTrader.Clear();
         s_entityToName.Clear();
         s_entityToGreeting.Clear();
+    }
+
+    void RespawnAllChunked(QT_Config cfg)
+    {
+        DespawnAll();
+
+        m_pendingSpawnDefs.Clear();
+        m_pendingSpawnIndex = 0;
+
+        if (!cfg) return;
+        foreach (QT_TraderDef def : cfg.TraderNPCPositions)
+            m_pendingSpawnDefs.Insert(def);
+
+        SpawnPendingBatch();
+    }
+
+    private void SpawnPendingBatch()
+    {
+        int spawned = 0;
+        while (m_pendingSpawnIndex < m_pendingSpawnDefs.Count() && spawned < SPAWN_BATCH_SIZE)
+        {
+            QT_TraderDef def = m_pendingSpawnDefs[m_pendingSpawnIndex];
+            m_pendingSpawnIndex++;
+            spawned++;
+            if (def) SpawnNPC(def);
+        }
+
+        if (m_pendingSpawnIndex < m_pendingSpawnDefs.Count())
+            GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(SpawnPendingBatch, 250, false);
+        else
+            Print("[QuestTrader] Chunked NPC respawn complete. Spawned " + m_spawnedNPCs.Count() + " traders.");
     }
 
     // Called from MissionServer.OnUpdate — checks every 30s and

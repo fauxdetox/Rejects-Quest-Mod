@@ -42,7 +42,7 @@ PanelWidgetClass root {
        vexactpos 0
        hexactsize 0
        vexactsize 0
-       text "THE COLLECTOR"
+       text ""
        "exact text" 1
        "text valign" center
       }
@@ -55,10 +55,10 @@ PanelWidgetClass root {
        hexactsize 0
        vexactsize 0
        style Normal
-       text "QUESTS"
+       text "#QuestTrader_MENU_TITLE"
        font "gui/fonts/sdf_MetronBook24"
        "exact text" 1
-       "exact text size" 30
+       "exact text size" 22
        "size to text h" 0
        "size to text v" 0
        "text halign" center
@@ -121,11 +121,11 @@ PanelWidgetClass root {
          hexactsize 0
          vexactsize 0
          style DayZDefaultButtonNoBorder
-         text "ACTIVE"
-         text_proportion 0.5
+         text "#QuestTrader_MENU_AVAILABLE"
+         text_proportion 0.26
          font "gui/fonts/sdf_MetronBook24"
         }
-        ButtonWidgetClass BtnTabDone {
+        ButtonWidgetClass BtnTabNow {
          color 0.2 0.2 0.2 1
          position 0.33 0
          size 0.33 1
@@ -134,8 +134,21 @@ PanelWidgetClass root {
          hexactsize 0
          vexactsize 0
          style DayZDefaultButtonNoBorder
-         text "DONE"
-         text_proportion 0.5
+         text "#QuestTrader_MENU_NOW"
+         text_proportion 0.32
+         font "gui/fonts/sdf_MetronBook24"
+        }
+        ButtonWidgetClass BtnTabDone {
+         color 0.2 0.2 0.2 1
+         position 0.66 0
+         size 0.34 1
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         style DayZDefaultButtonNoBorder
+         text "#QuestTrader_MENU_DONE"
+         text_proportion 0.32
          font "gui/fonts/sdf_MetronBook24"
         }
        }
@@ -198,8 +211,8 @@ PanelWidgetClass root {
          vexactpos 0
          hexactsize 0
          vexactsize 0
-         text "Quest Description with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions"
-         font "gui"
+         text ""
+         font "gui/fonts/sdf_MetronBook24"
          "exact text" 1
          wrap 1
          "condense whitespace" 1
@@ -223,7 +236,7 @@ PanelWidgetClass root {
            hexactsize 0
            vexactsize 0
            style Bold
-           text "DESCRIPTION"
+           text "#QuestTrader_MENU_DESCRIPTION"
            "exact text" 0
            "text valign" center
           }
@@ -254,8 +267,8 @@ PanelWidgetClass root {
          vexactpos 0
          hexactsize 0
          vexactsize 0
-         text "This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives...This is the quest objectives..."
-         font "gui"
+         text ""
+         font "gui/fonts/sdf_MetronBook24"
          "exact text" 1
          wrap 1
          "condense whitespace" 1
@@ -279,7 +292,7 @@ PanelWidgetClass root {
            hexactsize 0
            vexactsize 0
            style Bold
-           text "OBJECTIVES"
+           text "#QuestTrader_MENU_OBJECTIVES"
            "exact text" 0
            "text valign" center
           }
@@ -308,8 +321,8 @@ PanelWidgetClass root {
          vexactpos 0
          hexactsize 0
          vexactsize 0
-         text "Quest \nDescription with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions Quest Description with instructions"
-         font "gui"
+         text ""
+         font "gui/fonts/sdf_MetronBook24"
          "exact text" 1
          wrap 1
          "condense whitespace" 1
@@ -333,7 +346,7 @@ PanelWidgetClass root {
            hexactsize 0
            vexactsize 0
            style Bold
-           text "REWARDS"
+           text "#QuestTrader_MENU_REWARDS"
            "exact text" 0
            "text valign" center
           }
@@ -361,8 +374,8 @@ PanelWidgetClass root {
          hexactsize 0
          vexactsize 0
          style DayZDefaultButton
-         text "ACCEPT"
-         text_proportion 0.6
+         text "#QuestTrader_BUTTON_ACCEPT"
+         text_proportion 0.42
          font "gui/fonts/sdf_MetronBook24"
          "disabled text color" 0 0 0 0.902
          "text sharpness" 1.3
@@ -370,7 +383,7 @@ PanelWidgetClass root {
         }
         ButtonWidgetClass BtnComplete {
          color 0.153 0.153 0.153 1
-         position 0.26 0
+         position 0.358 0
          size 0.25 1
          halign left_ref
          valign bottom_ref
@@ -379,8 +392,8 @@ PanelWidgetClass root {
          hexactsize 0
          vexactsize 0
          style DayZDefaultButton
-         text "COMPLETE"
-         text_proportion 0.6
+         text "#QuestTrader_BUTTON_COMPLETE"
+         text_proportion 0.38
          font "gui/fonts/sdf_MetronBook24"
          "disabled text color" 0 0 0 0.902
          "text sharpness" 1.3
@@ -388,7 +401,7 @@ PanelWidgetClass root {
         }
         ButtonWidgetClass BtnCancel {
          color 0.153 0.153 0.153 1
-         position 0.52 0
+         position 0.749 0
          size 0.25 1
          halign left_ref
          valign bottom_ref
@@ -397,8 +410,8 @@ PanelWidgetClass root {
          hexactsize 0
          vexactsize 0
          style DayZDefaultButton
-         text "CANCEL"
-         text_proportion 0.6
+         text "#QuestTrader_BUTTON_CANCEL"
+         text_proportion 0.42
          font "gui/fonts/sdf_MetronBook24"
          "disabled text color" 0 0 0 0.902
          "text sharpness" 1.3

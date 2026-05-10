@@ -52,8 +52,8 @@ class QT_QuestHUD : UIScriptedMenu
         m_headerText  = TextWidget.Cast(layoutRoot.FindAnyWidget("HUDHeader"));
         m_toggleHint  = TextWidget.Cast(layoutRoot.FindAnyWidget("HUDToggleHint"));
 
-        if (m_headerText)  m_headerText.SetText("[ QUESTS ]");
-        if (m_toggleHint) m_toggleHint.SetText("[Y] Toggle");
+        if (m_headerText)  m_headerText.SetText(QT_L10n.Key("HUD_TITLE"));
+        if (m_toggleHint) m_toggleHint.SetText(QT_L10n.Key("HUD_TOGGLE"));
 
         m_initialised = true;
         QT_Refresh();
@@ -82,22 +82,27 @@ class QT_QuestHUD : UIScriptedMenu
         foreach (QT_HUDQuestEntry entry : m_entries)
         {
             string stateStr = "";
-            if (entry.state == QT_QuestState.COMPLETED) stateStr = " [DONE!]";
+            if (entry.state == QT_QuestState.COMPLETED) stateStr = " " + QT_L10n.T("HUD_DONE");
             content = content + entry.title + stateStr + "\n";
             foreach (string line : entry.objectiveLines)
-                content = content + "  " + line + "\n";
+                content = content + "  " + QT_L10n.ResolveText(line) + "\n";
             content = content + "\n";
         }
 
         m_contentText.SetText(content);
     }
 
+    void ToggleVisible()
+    {
+        m_visible = !m_visible;
+        QT_Refresh();
+    }
+
     override bool OnKeyPress(Widget w, int x, int y, int key)
     {
         if (key == TOGGLE_KEY)
         {
-            m_visible = !m_visible;
-            QT_Refresh();
+            ToggleVisible();
             return true;
         }
         return false;

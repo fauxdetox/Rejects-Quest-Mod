@@ -180,6 +180,9 @@ class QT_ConfigLoader
             return null;
         }
 
+        if (!cfg.AdminSteamIds)
+            cfg.AdminSteamIds = new array<string>();
+
         Print("[QuestTrader] Config loaded - " + cfg.TraderNPCPositions.Count() + " traders, " + cfg.Quests.Count() + " quests.");
         return cfg;
     }
@@ -194,7 +197,7 @@ class QT_ConfigLoader
         if (!FileExist(dstDir)) MakeDirectory(dstDir);
 
         // Minimal working config - 1 trader near Elektro, 1 quest
-        string defaultJson = "{\"TraderNPCPositions\":[{\"id\":\"trader_001\",\"name\":\"Viktor\",\"position\":[3692.0,0.0,5988.0],\"orientation\":[0.0,180.0,0.0],\"model\":\"SurvivorM_Mirek\",\"greeting\":\"Hello survivor. I have work for you.\",\"farewell\":\"Good luck.\"}],\"Quests\":[{\"id\":\"quest_001\",\"traderId\":\"trader_001\",\"title\":\"Medical Supplies\",\"description\":\"Bring me bandages.\",\"type\":0,\"repeatable\":true,\"cooldownHours\":1,\"objectives\":[{\"itemClassName\":\"Bandage\",\"requiredAmount\":3,\"description\":\"Collect 3 Bandages\"}],\"rewards\":[{\"itemClassName\":\"AKM\",\"amount\":1}],\"rewardMessage\":\"Well done!\",\"acceptMessage\":\"Bring me 3 bandages.\",\"prerequisiteQuestIds\":[]}],\"Settings\":{\"interactionDistance\":3.5,\"showQuestMarkersOnMap\":true,\"notifyOnKillProgress\":true,\"debugLogging\":true}}";
+        string defaultJson = "{\"AdminSteamIds\":[],\"TraderNPCPositions\":[{\"id\":\"trader_001\",\"name\":\"Viktor\",\"position\":[3692.0,0.0,5988.0],\"orientation\":[0.0,180.0,0.0],\"model\":\"SurvivorM_Mirek\",\"greeting\":\"Hello survivor. I have work for you.\",\"farewell\":\"Good luck.\"}],\"Quests\":[{\"id\":\"quest_001\",\"traderId\":\"trader_001\",\"title\":\"Medical Supplies\",\"description\":\"Bring me bandages.\",\"type\":0,\"repeatable\":true,\"cooldownHours\":1,\"objectives\":[{\"itemClassName\":\"Bandage\",\"requiredAmount\":3,\"description\":\"Collect 3 Bandages\"}],\"rewards\":[{\"itemClassName\":\"AKM\",\"amount\":1}],\"rewardMessage\":\"Well done!\",\"acceptMessage\":\"Bring me 3 bandages.\",\"prerequisiteQuestIds\":[]}],\"Settings\":{\"interactionDistance\":3.5,\"showQuestMarkersOnMap\":true,\"notifyOnKillProgress\":true,\"debugLogging\":true}}";
 
         FileHandle fh = OpenFile(PROFILE_PATH, FileMode.WRITE);
         if (fh != 0)

@@ -12,6 +12,7 @@ upon completion. Everything is driven by a single JSON config file – no recomp
 - **Kill quests** – require the player to kill specific entity types (wolves, deer, boar, etc.)
 - **Multiple traders** – place as many NPCs as you like, each with their own quest pool
 - **Prerequisites** – chain quests so later ones unlock after earlier ones complete
+- **Multiple active quests** – players can run one quest per NPC at the same time
 - **Repeatable quests** with configurable cooldown (hours)
 - **Live kill-progress notifications** in chat
 - **Full JSON config** – add/edit traders and quests without touching a single script
@@ -37,6 +38,7 @@ upon completion. Everything is driven by a single JSON config file – no recomp
 @QuestTrader/
 ├── config.cpp
 ├── ModInfo.c
+├── stringtable.csv              ← UI translations
 ├── config/
 │   └── QuestConfig.json          ← Edit this!
 ├── gui/
@@ -58,6 +60,24 @@ upon completion. Everything is driven by a single JSON config file – no recomp
             ├── QT_MissionHooks.c     (Mission lifecycle hooks)
             └── QT_QuestMenu.c        (Client UI)
 ```
+
+---
+
+## Text Encoding and Translations
+
+Quest and trader texts in `QuestConfig.json` should be saved as **UTF-8**. This allows PT/BR text with accents such as `ação`, `coração`, `missão`, `informação`, `ã`, `õ` and `ç` in `title`, `description`, `greeting`, `acceptMessage`, `rewardMessage`, objective descriptions and trader names.
+
+Fixed UI/menu text is translated through `stringtable.csv` using `QuestTrader_*` keys. Add or edit language columns there to translate global labels such as `AVAILABLE`, `NOW`, `DONE`, `DESCRIPTION`, `OBJECTIVES`, `REWARDS`, `ACCEPT`, `COMPLETE`, `CANCEL`, the quest log, journal, HUD and admin panel.
+
+Layouts use DayZ stringtable keys like:
+
+```txt
+text "#QuestTrader_BUTTON_ACCEPT"
+```
+
+Scripts use `QT_L10n.Key("BUTTON_ACCEPT")` or `QT_L10n.ApplyText(...)` for widget text that should be translated directly by the engine. Composed runtime lines use `QT_L10n.T(...)` and `QT_L10n.ResolveText(...)`.
+
+Item classnames sent to the client are also resolved there through the local DayZ config, so vanilla item names inherit the player's game language instead of depending on the server language.
 
 ---
 
@@ -119,6 +139,9 @@ upon completion. Everything is driven by a single JSON config file – no recomp
 ### Global Settings
 
 ```json
+"AdminSteamIds": [
+  "76561198000000000"
+],
 "Settings": {
   "interactionDistance": 3.5,       // Metres the player must be within to interact
   "showQuestMarkersOnMap": true,     // (Future feature hook)
@@ -126,6 +149,11 @@ upon completion. Everything is driven by a single JSON config file – no recomp
   "debugLogging": false              // Verbose server log output
 }
 ```
+
+QuestTrader admins can open the admin panel with `Insert` and close it with `Escape`.
+Admins are accepted only from `AdminSteamIds` in `QuestConfig.json`. Use the
+player Steam64 ID there; the mod checks both the DayZ identity ID and the plain
+Steam ID exposed by the server.
 
 ---
 

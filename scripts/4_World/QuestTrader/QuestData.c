@@ -59,6 +59,12 @@ class QT_Reward
     void QT_Reward() { itemClassName = ""; amount = 1; }
 }
 
+class QT_SpawnItem
+{
+    string itemClass;
+    vector position;
+}
+
 class QT_QuestDef
 {
     string              id;
@@ -75,6 +81,9 @@ class QT_QuestDef
     ref array<string>   prerequisiteQuestIds;
     string              deliveryTraderId;   // DELIVER: trader to deliver to
     string              deliveryItemClass;  // DELIVER: item given on accept
+    string              spawnItemClass;     // Optional: item spawned at world position on accept
+    vector              spawnPosition;      // World position for spawnItemClass
+    ref array<ref QT_SpawnItem> spawnItems; // Optional: multiple items to spawn on accept
 
     void QT_QuestDef()
     {
@@ -83,6 +92,9 @@ class QT_QuestDef
         prerequisiteQuestIds = new array<string>();
         deliveryTraderId     = "";
         deliveryItemClass    = "";
+        spawnItemClass       = "";
+        spawnPosition        = vector.Zero;
+        spawnItems           = new array<ref QT_SpawnItem>();
     }
 }
 
@@ -140,12 +152,14 @@ class QT_Settings
 
 class QT_Config
 {
+    ref array<string>             AdminSteamIds;
     ref array<ref QT_TraderDef>  TraderNPCPositions;
     ref array<ref QT_QuestDef>   Quests;
     ref QT_Settings              Settings;
 
     void QT_Config()
     {
+        AdminSteamIds     = new array<string>();
         TraderNPCPositions = new array<ref QT_TraderDef>();
         Quests             = new array<ref QT_QuestDef>();
         Settings           = new QT_Settings();

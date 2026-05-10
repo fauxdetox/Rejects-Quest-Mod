@@ -52,6 +52,17 @@ class QT_JsonHelper
         while (FGets(fh, line) >= 0)
             content = content + line;
         CloseFile(fh);
+
+        // Some Windows editors save UTF-8 JSON with a BOM. Strip a tiny
+        // prefix before the first JSON token so JsonSerializer sees "{".
+        int firstBrace = content.IndexOf("{");
+        int firstBracket = content.IndexOf("[");
+        int firstJsonToken = firstBrace;
+        if (firstJsonToken < 0 || (firstBracket >= 0 && firstBracket < firstJsonToken))
+            firstJsonToken = firstBracket;
+        if (firstJsonToken > 0 && firstJsonToken <= 3)
+            content = content.Substring(firstJsonToken, content.Length() - firstJsonToken);
+
         return content;
     }
 }

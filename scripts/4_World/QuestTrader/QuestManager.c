@@ -10,6 +10,10 @@ class QT_QuestManager
     private ref QT_Config m_config;
     private ref map<string, ref map<string, ref QT_PlayerQuestState>> m_playerStates;
     private ref QT_ItemSettings m_itemSettings;
+    // uid+questId -> spawned world object (for cleanup on cancel/complete)
+    private ref map<string, Object> m_spawnedQuestItems;
+    // uid+questId -> array of spawned entities (animals/zombies) for reset on reaccept
+    private ref map<string, ref array<Object>> m_spawnedQuestEntities;
 
     static QT_QuestManager GetInstance()
     {
@@ -21,15 +25,58 @@ class QT_QuestManager
     {
         // Register RPC dispatcher so 3_Game hook can call into 4_World
         QT_RPCDispatcherBase.s_instance = new QT_RPCDispatcher();
-        m_playerStates = new map<string, ref map<string, ref QT_PlayerQuestState>>();
-        m_config = QT_ConfigLoader.LoadConfig();
-        m_itemSettings = QT_ItemSettingsLoader.LoadItemSettings();
+        m_playerStates      = new map<string, ref map<string, ref QT_PlayerQuestState>>();
+        m_spawnedQuestItems    = new map<string, Object>();
+        m_spawnedQuestEntities = new map<string, ref array<Object>>();
+        m_config            = QT_ConfigLoader.LoadConfig();
+        m_itemSettings      = QT_ItemSettingsLoader.LoadItemSettings();
         int qc = 0;
         if (m_config) qc = m_config.Quests.Count();
         QT_Logger.GetInstance().Info("SYSTEM", "QuestManager initialised. " + qc + " quests loaded.");
     }
 
     QT_Config GetConfig() { return m_config; }
+
+    bool ReloadConfig()
+    {
+        SaveAll();
+
+        ref QT_Config newConfig = QT_ConfigLoader.LoadConfig();
+        if (!newConfig)
+        {
+            QT_Logger.GetInstance().Error("ADMIN", "Config reload failed: loader returned null.");
+            return false;
+        }
+
+        ref QT_ItemSettings newItemSettings = QT_ItemSettingsLoader.LoadItemSettings();
+        if (!newItemSettings)
+            newItemSettings = QT_ItemSettingsLoader.BuildDefaultItemSettings();
+
+        m_config = newConfig;
+        m_itemSettings = newItemSettings;
+        SyncLoadedPlayerStatesWithConfig();
+
+        QT_Logger.GetInstance().Info("ADMIN", "Config reloaded. " + m_config.TraderNPCPositions.Count() + " traders, " + m_config.Quests.Count() + " quests.");
+        return true;
+    }
+
+    private void SyncLoadedPlayerStatesWithConfig()
+    {
+        foreach (string uid, map<string, ref QT_PlayerQuestState> questMap : m_playerStates)
+        {
+            foreach (string questId, QT_PlayerQuestState qs : questMap)
+            {
+                QT_QuestDef def = GetQuestDef(questId);
+                if (!def || !qs || !qs.objectiveProgress) continue;
+
+                while (qs.objectiveProgress.Count() < def.objectives.Count())
+                    qs.objectiveProgress.Insert(0);
+
+                while (qs.objectiveProgress.Count() > def.objectives.Count())
+                    qs.objectiveProgress.Remove(qs.objectiveProgress.Count() - 1);
+            }
+        }
+    }
 
     void OnPlayerConnected(string uid)
     {
@@ -116,12 +163,62 @@ class QT_QuestManager
         return null;
     }
 
+    // Admin helper: resolve a quest by ID, title, or (if blank) the player's first active quest.
+    // Allows admins to type either the internal quest_ID or the human-readable quest title.
+    QT_QuestDef ResolveQuestForAdmin(string uid, string input)
+    {
+        if (!m_config) return null;
+
+        // Blank input -> use the player's first active quest
+        string trimmed = input.Trim();
+        if (trimmed == "")
+        {
+            array<ref QT_QuestDef> active = GetActiveQuestsForPlayer(uid);
+            if (active.Count() > 0) return active[0];
+            return null;
+        }
+
+        // Exact ID match
+        foreach (QT_QuestDef def : m_config.Quests)
+            if (def.id == trimmed) return def;
+
+        // Case-insensitive title match
+        string inputLower = trimmed;
+        inputLower.ToLower();
+        foreach (QT_QuestDef defT : m_config.Quests)
+        {
+            string t = defT.title;
+            t.ToLower();
+            if (t == inputLower) return defT;
+        }
+
+        // Partial title match (contains)
+        foreach (QT_QuestDef defP : m_config.Quests)
+        {
+            string tp = defP.title;
+            tp.ToLower();
+            if (tp.Contains(inputLower)) return defP;
+        }
+
+        return null;
+    }
+
     array<ref QT_QuestDef> GetQuestsForTrader(string traderId, string playerUID)
     {
         array<ref QT_QuestDef> result = new array<ref QT_QuestDef>();
         if (!m_config) return result;
         foreach (QT_QuestDef def : m_config.Quests)
         {
+            QT_QuestState state = GetEffectiveState(playerUID, def.id);
+
+            // Hide locked quests. A quest is visible only when it can be
+            // accepted now, is already active/ready, or belongs in DONE.
+            if (!ArePrerequisitesMet(playerUID, def))
+            {
+                if (state != QT_QuestState.ACTIVE && state != QT_QuestState.COMPLETED && state != QT_QuestState.TURNED_IN && state != QT_QuestState.COOLDOWN)
+                    continue;
+            }
+
             // Normal quests: show at their origin trader
             if (def.traderId == traderId)
             {
@@ -131,12 +228,22 @@ class QT_QuestManager
             // Delivery quests: also show at the delivery trader when active or completed
             if (def.type == QT_QuestType.DELIVER && def.deliveryTraderId == traderId)
             {
-                QT_QuestState st = GetEffectiveState(playerUID, def.id);
-                if (st == QT_QuestState.ACTIVE || st == QT_QuestState.COMPLETED)
+                if (state == QT_QuestState.ACTIVE || state == QT_QuestState.COMPLETED)
                     result.Insert(def);
             }
         }
         return result;
+    }
+
+    bool ArePrerequisitesMet(string uid, QT_QuestDef def)
+    {
+        if (!def) return false;
+        foreach (string preReqId : def.prerequisiteQuestIds)
+        {
+            if (GetEffectiveState(uid, preReqId) != QT_QuestState.TURNED_IN)
+                return false;
+        }
+        return true;
     }
 
     array<ref QT_QuestDef> GetActiveQuestsForPlayer(string uid)
@@ -150,6 +257,92 @@ class QT_QuestManager
                 result.Insert(def);
         }
         return result;
+    }
+
+    QT_QuestState GetDisplayState(PlayerBase player, QT_QuestDef def)
+    {
+        if (!player || !player.GetIdentity() || !def)
+            return QT_QuestState.AVAILABLE;
+
+        QT_QuestState state = GetEffectiveState(player.GetIdentity().GetId(), def.id);
+        if (state != QT_QuestState.ACTIVE && state != QT_QuestState.COMPLETED)
+            return state;
+
+        if (def.type != QT_QuestType.COLLECT && def.type != QT_QuestType.DELIVER)
+            return state;
+
+        if (AreInventoryObjectivesReady(player, def))
+            return QT_QuestState.COMPLETED;
+
+        return QT_QuestState.ACTIVE;
+    }
+
+    bool AreInventoryObjectivesReady(PlayerBase player, QT_QuestDef def)
+    {
+        if (!player || !def) return false;
+
+        if (def.type == QT_QuestType.DELIVER && def.objectives.Count() == 0)
+            return HasDeliveryItem(player, def);
+
+        if (def.objectives.Count() == 0) return false;
+
+        foreach (QT_Objective obj : def.objectives)
+        {
+            if (!obj || obj.itemClassName == "") return false;
+            if (CountItemsInInventory(player, obj.itemClassName) < obj.requiredAmount)
+                return false;
+        }
+        return true;
+    }
+
+    string BuildInventoryQuestSignature(PlayerBase player)
+    {
+        if (!player || !player.GetIdentity()) return "";
+
+        string uid = player.GetIdentity().GetId();
+        string sig = "";
+        array<ref QT_QuestDef> active = GetActiveQuestsForPlayer(uid);
+        foreach (QT_QuestDef def : active)
+        {
+            if (!def) continue;
+            if (def.type != QT_QuestType.COLLECT && def.type != QT_QuestType.DELIVER) continue;
+
+            sig = sig + def.id + ":" + ((int)GetDisplayState(player, def)).ToString() + ":";
+
+            if (def.type == QT_QuestType.DELIVER && def.objectives.Count() == 0)
+            {
+                int deliveryCount = CountItemsInInventory(player, def.deliveryItemClass);
+                if (deliveryCount > 1) deliveryCount = 1;
+                sig = sig + deliveryCount.ToString() + "/1;";
+                continue;
+            }
+
+            foreach (QT_Objective obj : def.objectives)
+            {
+                int count = CountItemsInInventory(player, obj.itemClassName);
+                if (count > obj.requiredAmount) count = obj.requiredAmount;
+                sig = sig + count.ToString() + "/" + obj.requiredAmount.ToString() + ",";
+            }
+            sig = sig + ";";
+        }
+        return sig;
+    }
+
+    string BuildReadyInventoryQuestSignature(PlayerBase player)
+    {
+        if (!player || !player.GetIdentity()) return "";
+
+        string uid = player.GetIdentity().GetId();
+        string sig = "";
+        array<ref QT_QuestDef> active = GetActiveQuestsForPlayer(uid);
+        foreach (QT_QuestDef def : active)
+        {
+            if (!def) continue;
+            if (def.type != QT_QuestType.COLLECT && def.type != QT_QuestType.DELIVER) continue;
+            if (GetDisplayState(player, def) == QT_QuestState.COMPLETED)
+                sig = sig + def.id + ";";
+        }
+        return sig;
     }
 
     QT_QuestState GetEffectiveState(string uid, string questId)
@@ -198,14 +391,18 @@ class QT_QuestManager
         QT_QuestDef def = GetQuestDef(questId);
         if (!def) return false;
 
-        // Only allow one active quest at a time across all traders
+        // Allow one active/ready quest per origin trader.
         auto playerMap = GetOrCreatePlayerMap(uid);
         foreach (string existingId, QT_PlayerQuestState existingQs : playerMap)
         {
             if (existingId == questId) continue; // don't check the quest being accepted
             QT_QuestState effectiveState = GetEffectiveState(uid, existingId);
             if (effectiveState != QT_QuestState.ACTIVE && effectiveState != QT_QuestState.COMPLETED) continue;
-            QT_RPCManager.SendToast(player, "Finish your current quest before accepting another!", QT_ToastType.WARNING);
+
+            QT_QuestDef existingDef = GetQuestDef(existingId);
+            if (!existingDef || existingDef.traderId != def.traderId) continue;
+
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_FINISH_CURRENT_TRADER", QT_ToastType.WARNING);
             return false;
         }
 
@@ -226,7 +423,7 @@ class QT_QuestManager
 
         if (GetEffectiveState(uid, questId) != QT_QuestState.AVAILABLE)
         {
-            QT_RPCManager.SendToast(player, "Quest not available.", QT_ToastType.WARNING);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_QUEST_NOT_AVAILABLE", QT_ToastType.WARNING);
             return false;
         }
 
@@ -238,11 +435,400 @@ class QT_QuestManager
             GiveDeliveryItem(player, def);
 
         QT_PersistenceManager.SavePlayer(uid, GetOrCreatePlayerMap(uid));
-        QT_RPCManager.SendToast(player, "Quest accepted: " + def.title, QT_ToastType.ACCEPT);
+        QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_QUEST_ACCEPTED " + def.title, QT_ToastType.ACCEPT);
         QT_RPCManager.SendQuestInfo(player, def);
         QT_RPCManager.SendHUDUpdate(player);
         QT_Logger.GetInstance().Info("QUEST", "Accepted: " + def.title, uid, player.GetIdentity().GetName());
+
+        // Spawn quest entities nearby for kill quests
+        if (def.type == QT_QuestType.KILL)
+            SpawnQuestEntities(player, def);
+
+        // Spawn a world item at a fixed position if defined
+        if (def.spawnItemClass != "")
+            SpawnQuestItem(uid, def, player);
+
+        // Spawn additional items array if defined
+        if (def.spawnItems && def.spawnItems.Count() > 0)
+        {
+            foreach (QT_SpawnItem si : def.spawnItems)
+            {
+                vector pos = si.position;
+                if (pos[1] == 0) pos[1] = GetGame().SurfaceY(pos[0], pos[2]) + 0.3;
+                Object obj = GetGame().CreateObject(si.itemClass, pos, false, true);
+                if (obj)
+                {
+                    string key = uid + "_" + def.id + "_" + si.itemClass;
+                    m_spawnedQuestItems.Insert(key, obj);
+                    Print("[QuestTrader] Spawned quest item: " + si.itemClass + " at " + pos.ToString());
+                }
+            }
+        }
+
         return true;
+    }
+
+    private void SpawnQuestItem(string uid, QT_QuestDef def, PlayerBase player = null)
+    {
+        vector pos = def.spawnPosition;
+
+        // Zero position = spawn on or near the player
+        if (pos == vector.Zero && player)
+        {
+            // Try to create directly in inventory first
+            EntityAI item = null;
+            if (player.GetInventory())
+                item = EntityAI.Cast(player.GetInventory().CreateInInventory(def.spawnItemClass));
+
+            if (item)
+            {
+                string key = uid + "_" + def.id;
+                m_spawnedQuestItems.Insert(key, item);
+                Print("[QuestTrader] Spawned quest item " + def.spawnItemClass + " in player inventory: " + uid);
+                return;
+            }
+
+            // Inventory full — drop at player's feet
+            pos = player.GetPosition();
+            pos[1] = GetGame().SurfaceY(pos[0], pos[2]) + 0.3;
+        }
+        else if (pos[1] == 0)
+        {
+            // Position set but Y is 0 — calculate ground height
+            pos[1] = GetGame().SurfaceY(pos[0], pos[2]) + 0.5;
+        }
+
+        Object obj = GetGame().CreateObject(def.spawnItemClass, pos, false, true);
+        if (!obj)
+        {
+            Print("[QuestTrader] ERROR - Could not spawn quest item: " + def.spawnItemClass + " for quest: " + def.id);
+            return;
+        }
+
+        string key2 = uid + "_" + def.id;
+        m_spawnedQuestItems.Insert(key2, obj);
+        Print("[QuestTrader] Spawned quest item: " + def.spawnItemClass + " at " + pos.ToString() + " for player: " + uid);
+    }
+
+    private void CleanupQuestItem(string uid, string questId)
+    {
+        string key = uid + "_" + questId;
+        if (m_spawnedQuestItems.Contains(key))
+        {
+            Object obj = m_spawnedQuestItems.Get(key);
+            if (obj) GetGame().ObjectDelete(obj);
+            m_spawnedQuestItems.Remove(key);
+            Print("[QuestTrader] Cleaned up quest item for player: " + uid + " quest: " + questId);
+        }
+
+        // Also delete and clear tracked entity references on cleanup (turn-in, cancel, complete)
+        if (m_spawnedQuestEntities.Contains(key))
+        {
+            array<Object> entities = m_spawnedQuestEntities.Get(key);
+            foreach (Object ent : entities)
+            {
+                if (ent)
+                {
+                    EntityAI entAI = EntityAI.Cast(ent);
+                    if (entAI && entAI.IsAlive())
+                        GetGame().ObjectDelete(ent);
+                }
+            }
+            m_spawnedQuestEntities.Remove(key);
+            Print("[QuestTrader] Cleaned up spawned entities for player: " + uid + " quest: " + questId);
+        }
+    }
+
+    private string ResolveSpawnClass(string entityClassName)
+    {
+        // Dummy objectives used for recon quests — never spawn these
+        if (entityClassName == "QT_ReconObjective") return "";
+
+        // Translate quest entityClassNames to actual spawnable prefixed classnames
+        if (entityClassName == "Deer" || entityClassName == "CervusElaphus")
+            return "Animal_CervusElaphus";
+        if (entityClassName == "CapreolusCapreolus")
+            return "Animal_CapreolusCapreolus";
+        if (entityClassName == "CanisLupus")
+            return "Animal_CanisLupus_Grey";
+        if (entityClassName == "SusScrofa")
+            return "Animal_SusScrofa";
+        if (entityClassName == "SusDomesticus")
+            return "Animal_SusDomesticus";
+        if (entityClassName == "UrsusArctos")
+            return "Animal_UrsusArctos";
+        if (entityClassName == "RangiferTarandus")
+            return "Animal_RangiferTarandus";
+        if (entityClassName == "VulpesVulpes")
+            return "Animal_VulpesVulpes";
+        if (entityClassName == "LepusEuropaeus")
+            return "Animal_LepusEuropaeus";
+        if (entityClassName == "OvisAries")
+            return "Animal_OvisAries";
+        if (entityClassName == "CapraHircus")
+            return "Animal_CapraHircus_Brown";
+        if (entityClassName == "GallusGallusDomesticus")
+            return "Animal_GallusGallusDomesticus";
+        if (entityClassName == "BosTaurus")
+            return "Animal_BosTaurus_Brown";
+        // Infected and anything already prefixed pass through directly
+        return entityClassName;
+    }
+
+    private void SpawnQuestEntities(PlayerBase player, QT_QuestDef def)
+    {
+        string uid = player.GetIdentity().GetId();
+        string key = uid + "_" + def.id;
+        vector playerPos = player.GetPosition();
+
+        // Clear any previously spawned entities for this quest before spawning new ones
+        // This prevents cancel-reaccept loops from building up hordes
+        if (m_spawnedQuestEntities.Contains(key))
+        {
+            array<Object> oldEntities = m_spawnedQuestEntities.Get(key);
+            foreach (Object oldEnt : oldEntities)
+            {
+                if (oldEnt)
+                {
+                    EntityAI oldEntAI = EntityAI.Cast(oldEnt);
+                    if (oldEntAI && oldEntAI.IsAlive())
+                        GetGame().ObjectDelete(oldEnt);
+                }
+            }
+            m_spawnedQuestEntities.Remove(key);
+            Print("[QuestTrader] Cleared previous spawned entities for quest: " + def.id + " player: " + uid);
+        }
+
+        ref array<Object> spawnedEntities = new array<Object>();
+
+        foreach (QT_Objective obj : def.objectives)
+        {
+            string spawnClass = ResolveSpawnClass(obj.entityClassName);
+
+            // Empty string means this is a dummy/recon objective — skip spawning
+            if (spawnClass == "") continue;
+
+            // Pick a spawn centre 150-200m away in a random direction
+            float angle = Math.RandomFloat(0, Math.PI2);
+            float dist  = Math.RandomFloat(150, 200);
+            vector spawnCenter;
+            spawnCenter[0] = playerPos[0] + Math.Sin(angle) * dist;
+            spawnCenter[2] = playerPos[2] + Math.Cos(angle) * dist;
+            spawnCenter[1] = GetGame().SurfaceY(spawnCenter[0], spawnCenter[2]);
+
+            for (int i = 0; i < obj.requiredAmount; i++)
+            {
+                // Try up to 5 positions, pick one that has open sky above it
+                vector spawnPos = spawnCenter;
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    float scatter = Math.RandomFloat(0, Math.PI2);
+                    float scatterDist = Math.RandomFloat(3, 20);
+                    vector candidate;
+                    candidate[0] = spawnCenter[0] + Math.Sin(scatter) * scatterDist;
+                    candidate[2] = spawnCenter[2] + Math.Cos(scatter) * scatterDist;
+                    candidate[1] = GetGame().SurfaceY(candidate[0], candidate[2]) + 0.5;
+
+                    // Raycast upward — if nothing is hit within 3m we're not inside a building
+                    vector rayStart = candidate;
+                    vector rayEnd   = candidate + Vector(0, 3, 0);
+                    vector hitPos, hitNormal;
+                    float hitFraction;
+                    Object hitObject;
+                    PhxInteractionLayers collisionLayer = PhxInteractionLayers.BUILDING;
+                    if (!DayZPhysics.RayCastBullet(rayStart, rayEnd, collisionLayer, null, hitObject, hitPos, hitNormal, hitFraction))
+                    {
+                        spawnPos = candidate;
+                        break;
+                    }
+                }
+
+                Object spawned = GetGame().CreateObject(spawnClass, spawnPos, false, true);
+                if (spawned) spawnedEntities.Insert(spawned);
+            }
+
+            Print("[QuestTrader] Spawned " + obj.requiredAmount + "x " + spawnClass + " for quest: " + def.title);
+        }
+
+        // Track all spawned entities for this player+quest
+        if (spawnedEntities.Count() > 0)
+            m_spawnedQuestEntities.Insert(key, spawnedEntities);
+    }
+
+    void CompleteReconObjective(PlayerBase player, string questId)
+    {
+        if (!player || !player.GetIdentity()) return;
+        string uid = player.GetIdentity().GetId();
+
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        if (!playerMap.Contains(questId)) return;
+
+        QT_PlayerQuestState qs = playerMap.Get(questId);
+        if (!qs || qs.state != QT_QuestState.ACTIVE) return;
+
+        QT_QuestDef def = GetQuestDef(questId);
+        if (!def) return;
+
+        // Mark all objectives complete
+        for (int i = 0; i < qs.objectiveProgress.Count(); i++)
+        {
+            QT_Objective obj = def.objectives[i];
+            qs.objectiveProgress.Set(i, obj.requiredAmount);
+        }
+
+        qs.state = QT_QuestState.COMPLETED;
+        QT_PersistenceManager.SavePlayer(uid, playerMap);
+
+        if (questId == "quest_201")
+        {
+            SpawnHelicopterCrash("quest_201");
+            QT_RPCManager.SendToast(player, "Recon Complete! Get back to Sister Emma!", QT_ToastType.ACCEPT);
+        }
+        else
+        {
+            SpawnHelicopterCrash("quest_179");
+            QT_RPCManager.SendToast(player, "Recon Complete! Let's get back to Fisher!", QT_ToastType.ACCEPT);
+        }
+
+        QT_RPCManager.SendHUDUpdate(player);
+        Print("[QuestTrader] Recon objective completed for quest: " + questId + " player: " + uid);
+    }
+
+    private void SpawnHelicopterCrash(string questId = "quest_201")
+    {
+        vector crashPos;
+        if (questId == "quest_179")
+            crashPos = Vector(14030.4, 4.15, 11181.0);
+        else
+            crashPos = Vector(4569.39, 340.8, 10402.5);
+
+        // Play crash sound immediately
+        string soundSet = "HeliCrash_Distant_SoundSet";
+        Param3<bool, vector, int> playSound = new Param3<bool, vector, int>(true, crashPos, soundSet.Hash());
+        g_Game.RPCSingleParam(null, ERPCs.RPC_SOUND_HELICRASH, playSound, true);
+        Print("[QuestTrader] Played helicopter crash sound for " + questId);
+
+        // Delay the wreck and loot spawn by 20 seconds
+        if (questId == "quest_179")
+            GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(SpawnHelicopterWreck179, 20000, false);
+        else
+            GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(SpawnHelicopterWreck, 20000, false);
+    }
+
+    private void SpawnHelicopterWreck179()
+    {
+        vector crashPos = Vector(14030.4, 4.15, 11181.0);
+
+        Object heli = GetGame().CreateObject("Wreck_Mi8_Crashed", crashPos, false, true);
+        if (heli)
+            Print("[QuestTrader] Spawned Wreck_Mi8_Crashed at Rify coast");
+        else
+            Print("[QuestTrader] WARNING: Failed to spawn Wreck_Mi8_Crashed at Rify coast");
+
+        // Civilian weapons and ammo loot
+        ref array<string> loot179 = {
+            "Mosin9130", "Winchester70", "Ruger1022", "SKS", "CZ75", "Glock19",
+            "AmmoBox_762x54_20Rnd", "AmmoBox_762x54_20Rnd",
+            "AmmoBox_308Win_20Rnd", "AmmoBox_308Win_20Rnd",
+            "AmmoBox_22_50Rnd", "AmmoBox_22_50Rnd",
+            "AmmoBox_9x19_25rnd", "AmmoBox_9x19_25rnd",
+            "AmmoBox_12gaSlug_10Rnd",
+            "Mag_Ruger1022_30Rnd", "Mag_Ruger1022_30Rnd",
+            "HuntingOptic", "HuntingKnife", "PetrolLighter"
+        };
+
+        foreach (string item : loot179)
+        {
+            float angle = Math.RandomFloat(0, Math.PI2);
+            float dist  = Math.RandomFloat(3, 12);
+            vector lootPos;
+            lootPos[0] = crashPos[0] + Math.Sin(angle) * dist;
+            lootPos[2] = crashPos[2] + Math.Cos(angle) * dist;
+            lootPos[1] = GetGame().SurfaceY(lootPos[0], lootPos[2]) + 0.3;
+            GetGame().CreateObject(item, lootPos, false, true);
+        }
+
+        Print("[QuestTrader] Spawned civilian weapons loot at Rify crash site");
+
+        // Spawn civilian zombies around the crash site
+        ref array<string> zombies179 = {"ZmbF_JoggerSkinny_Red", "ZmbF_ShortSkirt_stripes", "ZmbM_PolicemanSpecForce"};
+        for (int z179 = 0; z179 < 4; z179++)
+        {
+            float zAngle2 = Math.RandomFloat(0, Math.PI2);
+            float zDist2  = Math.RandomFloat(5, 15);
+            vector zPos2;
+            zPos2[0] = crashPos[0] + Math.Sin(zAngle2) * zDist2;
+            zPos2[2] = crashPos[2] + Math.Cos(zAngle2) * zDist2;
+            zPos2[1] = GetGame().SurfaceY(zPos2[0], zPos2[2]);
+            GetGame().CreateObject(zombies179[Math.RandomInt(0, zombies179.Count())], zPos2, false, true);
+        }
+        Print("[QuestTrader] Spawned civilian zombies at Rify crash site");
+    }
+
+    private void SpawnHelicopterWreck()
+    {
+        vector crashPos = Vector(4569.39, 340.8, 10402.5);
+
+        // Spawn the Mi-8 wreck
+        Object heli = GetGame().CreateObject("Wreck_Mi8_Crashed", crashPos, false, true);
+        if (heli)
+            Print("[QuestTrader] Spawned Wreck_Mi8_Crashed at " + crashPos.ToString());
+        else
+            Print("[QuestTrader] WARNING: Failed to spawn Wreck_Mi8_Crashed");
+
+        // Spawn smoke grenades at crash site for visual effect
+        for (int s = 0; s < 5; s++)
+        {
+            float sAngle = Math.RandomFloat(0, Math.PI2);
+            float sDist  = Math.RandomFloat(0, 8);
+            vector smokePos;
+            smokePos[0] = crashPos[0] + Math.Sin(sAngle) * sDist;
+            smokePos[2] = crashPos[2] + Math.Cos(sAngle) * sDist;
+            smokePos[1] = GetGame().SurfaceY(smokePos[0], smokePos[2]) + 0.3;
+            GetGame().CreateObject("RDG2SmokeGrenade_Black", smokePos, false, true);
+        }
+
+        // Spawn medical loot scattered around the crash site
+        ref array<string> loot = {
+            "SalineBag", "SalineBag", "SalineBag",
+            "Morphine", "Morphine", "Morphine", "Morphine",
+            "Epinephrine", "Epinephrine",
+            "BandageDressing", "BandageDressing", "BandageDressing", "BandageDressing", "BandageDressing",
+            "TetracyclineAntibiotics", "TetracyclineAntibiotics",
+            "BloodBagEmpty", "BloodBagEmpty",
+            "Splint", "Splint",
+            "DisinfectantSpray",
+            "SewingKit"
+        };
+
+        foreach (string item : loot)
+        {
+            // Scatter loot 3-12m from crash centre
+            float angle = Math.RandomFloat(0, Math.PI2);
+            float dist  = Math.RandomFloat(3, 12);
+            vector lootPos;
+            lootPos[0] = crashPos[0] + Math.Sin(angle) * dist;
+            lootPos[2] = crashPos[2] + Math.Cos(angle) * dist;
+            lootPos[1] = GetGame().SurfaceY(lootPos[0], lootPos[2]) + 0.3;
+
+            GetGame().CreateObject(item, lootPos, false, true);
+        }
+
+        Print("[QuestTrader] Spawned helicopter crash medical loot at NWAF");
+
+        // Spawn medical zombies around the crash site
+        ref array<string> zombies201 = {"ZmbF_DoctorSkinny", "ZmbM_ParamedicNormal_Green", "ZmbM_DoctorFat"};
+        for (int z201 = 0; z201 < 4; z201++)
+        {
+            float zAngle = Math.RandomFloat(0, Math.PI2);
+            float zDist  = Math.RandomFloat(5, 15);
+            vector zPos;
+            zPos[0] = crashPos[0] + Math.Sin(zAngle) * zDist;
+            zPos[2] = crashPos[2] + Math.Cos(zAngle) * zDist;
+            zPos[1] = GetGame().SurfaceY(zPos[0], zPos[2]);
+            GetGame().CreateObject(zombies201[Math.RandomInt(0, zombies201.Count())], zPos, false, true);
+        }
+        Print("[QuestTrader] Spawned medical zombies at NWAF crash site");
     }
 
     bool CancelQuest(PlayerBase player, string questId)
@@ -268,6 +854,13 @@ class QT_QuestManager
         QT_RPCManager.SendToast(player, "Quest cancelled.", QT_ToastType.WARNING);
         QT_RPCManager.SendHUDUpdate(player);
         QT_Logger.GetInstance().Info("QUEST", "Cancelled: " + questId, uid, name);
+        CleanupQuestItem(uid, questId);
+
+        // Remove delivery item from inventory if this was a deliver quest
+        QT_QuestDef def = GetQuestDef(questId);
+        if (def && def.type == QT_QuestType.DELIVER)
+            RemoveDeliveryItem(player, def);
+
         return true;
     }
 
@@ -327,12 +920,13 @@ class QT_QuestManager
         // For delivery: mark COMPLETED once player has item and turns in
         if (!HasDeliveryItem(player, def))
         {
-            QT_RPCManager.SendToast(player, "You lost the delivery item!", QT_ToastType.WARNING);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_LOST_DELIVERY_ITEM", QT_ToastType.WARNING);
             return false;
         }
 
         RemoveDeliveryItem(player, def);
         GiveRewards(player, def);
+        CleanupQuestItem(uid, questId);
         RecordCompletion(player, def);
 
         if (def.repeatable) qs.state = QT_QuestState.COOLDOWN;
@@ -370,7 +964,7 @@ class QT_QuestManager
             if (count < obj.requiredAmount)
             {
                 int need = obj.requiredAmount - count;
-                QT_RPCManager.SendToast(player, "Still need " + need + "x " + obj.itemClassName, QT_ToastType.WARNING);
+                QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_STILL_NEED " + need + "x " + obj.itemClassName, QT_ToastType.WARNING);
                 return false;
             }
         }
@@ -379,6 +973,7 @@ class QT_QuestManager
             RemoveItemsFromInventory(player, obj2.itemClassName, obj2.requiredAmount);
 
         GiveRewards(player, def);
+        CleanupQuestItem(uid, questId);
         RecordCompletion(player, def);
 
         if (def.repeatable) qs.state = QT_QuestState.COOLDOWN;
@@ -418,6 +1013,7 @@ class QT_QuestManager
         }
 
         GiveRewards(player, def);
+        CleanupQuestItem(uid, questId);
         RecordCompletion(player, def);
 
         if (def.repeatable) qs.state = QT_QuestState.COOLDOWN;
@@ -454,6 +1050,7 @@ class QT_QuestManager
             foreach (int idx, QT_Objective obj : def.objectives)
             {
                 if (obj.entityClassName == "") continue;
+                if (obj.entityClassName == "QT_ReconObjective") continue;
 
                 // Check if this kill matches the objective
                 bool matched = false;
@@ -503,10 +1100,16 @@ class QT_QuestManager
         }
     }
 
-    void AdminResetQuest(string uid, string questId)
+    void AdminResetQuest(string uid, string input)
     {
+        QT_QuestDef def = ResolveQuestForAdmin(uid, input);
+        if (!def)
+        {
+            QT_Logger.GetInstance().Warn("ADMIN", "AdminResetQuest: could not resolve quest from input: '" + input + "' for " + uid);
+            return;
+        }
         auto playerMap = GetOrCreatePlayerMap(uid);
-        if (playerMap.Contains(questId)) playerMap.Remove(questId);
+        if (playerMap.Contains(def.id)) playerMap.Remove(def.id);
         QT_PersistenceManager.SavePlayer(uid, playerMap);
     }
 
@@ -528,6 +1131,81 @@ class QT_QuestManager
     {
         if (m_playerStates.Contains(uid)) m_playerStates.Remove(uid);
         QT_PersistenceManager.DeletePlayer(uid);
+
+        // Push a cleared HUD update to the wiped player if they are online
+        array<Man> players = new array<Man>();
+        GetGame().GetPlayers(players);
+        foreach (Man man : players)
+        {
+            PlayerBase pb = PlayerBase.Cast(man);
+            if (!pb || !pb.GetIdentity()) continue;
+            if (pb.GetIdentity().GetId() == uid)
+            {
+                QT_RPCManager.SendHUDUpdate(pb);
+                QT_RPCManager.SendToast(pb, "Your quests have been reset by an admin.", QT_ToastType.WARNING);
+                break;
+            }
+        }
+    }
+
+    // Admin force-completes a player's active quest, giving rewards
+    void AdminCompleteQuest(string uid, string input)
+    {
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        QT_QuestDef def = ResolveQuestForAdmin(uid, input);
+        if (!def)
+        {
+            QT_Logger.GetInstance().Warn("ADMIN", "AdminCompleteQuest: could not resolve quest from input: '" + input + "' for " + uid);
+            return;
+        }
+        string questId = def.id;
+
+        auto qs = GetPlayerQuestState(uid, questId);
+        if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED) return;
+
+        // Mark all kill objectives as complete so state resolves correctly
+        for (int i = 0; i < def.objectives.Count(); i++)
+        {
+            while (qs.objectiveProgress.Count() <= i)
+                qs.objectiveProgress.Insert(0);
+            qs.objectiveProgress.Set(i, def.objectives[i].requiredAmount);
+        }
+
+        // Find the online player to give rewards; skip reward if offline
+        array<Man> players = new array<Man>();
+        GetGame().GetPlayers(players);
+        PlayerBase target = null;
+        foreach (Man man : players)
+        {
+            PlayerBase pb = PlayerBase.Cast(man);
+            if (!pb || !pb.GetIdentity()) continue;
+            if (pb.GetIdentity().GetId() == uid) { target = pb; break; }
+        }
+
+        if (target)
+        {
+            GiveRewards(target, def);
+            RecordCompletion(target, def);
+            if (def.rewardMessage != "")
+                QT_RPCManager.SendToast(target, def.rewardMessage, QT_ToastType.REWARD);
+            QT_RPCManager.SendToast(target, "A quest has been completed for you by an admin.", QT_ToastType.INFO);
+        }
+        else
+        {
+            // Player is offline — record completion without giving rewards
+            string emptyName = uid;
+            QT_QuestHistory.GetInstance().RecordCompletion(uid, emptyName, def, GetGame().GetTime() / 1000);
+        }
+
+        CleanupQuestItem(uid, questId);
+
+        if (def.repeatable) qs.state = QT_QuestState.COOLDOWN;
+        else                qs.state = QT_QuestState.TURNED_IN;
+        qs.completedTimestamp = GetGame().GetTime() / 1000;
+
+        QT_PersistenceManager.SavePlayer(uid, playerMap);
+
+        if (target) QT_RPCManager.SendHUDUpdate(target);
     }
 
     private void RecordCompletion(PlayerBase player, QT_QuestDef def)
@@ -633,12 +1311,11 @@ class QT_QuestManager
 
     private void SendQuestCompleteNotification(PlayerBase player, QT_QuestDef def)
     {
-        // Build reward summary
         string rewardStr = "";
         foreach (QT_Reward rew : def.rewards)
         {
             if (rewardStr != "") rewardStr = rewardStr + ", ";
-            rewardStr = rewardStr + rew.amount + "x " + rew.itemClassName;
+            rewardStr = rewardStr + rew.amount.ToString() + "x " + QT_RPCManager.GetDisplayName(rew.itemClassName);
         }
         string line1 = "*** QUEST COMPLETE: " + def.title + " ***";
         string line2 = "Rewards: " + rewardStr;
@@ -656,6 +1333,18 @@ class QT_QuestManager
             if (entry == className) return true;
         }
         return false;
+    }
+
+    private string BuildRewardString(QT_QuestDef def)
+    {
+        string rewards = "";
+        foreach (QT_Reward r : def.rewards)
+        {
+            if (rewards != "") rewards += ", ";
+            rewards += r.amount.ToString() + "x " + r.itemClassName;
+        }
+        if (rewards != "") rewards = " [" + rewards + "]";
+        return rewards;
     }
 
     private void GiveRewards(PlayerBase player, QT_QuestDef def)

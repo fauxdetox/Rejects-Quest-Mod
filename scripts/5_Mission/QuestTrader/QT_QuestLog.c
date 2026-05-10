@@ -56,8 +56,16 @@ class QT_QuestLog : UIScriptedMenu
         m_historyPane      = layoutRoot.FindAnyWidget("HistoryPane");
         m_leaderPane       = layoutRoot.FindAnyWidget("LeaderPane");
 
+        ApplyLocalization();
         ShowTab(0);  // default: history
         return layoutRoot;
+    }
+
+    private void ApplyLocalization()
+    {
+        QT_L10n.ApplyText(layoutRoot, "LogTitle", "LOG_TITLE");
+        QT_L10n.ApplyText(layoutRoot, "TabHistory", "LOG_HISTORY");
+        QT_L10n.ApplyText(layoutRoot, "TabLeaderboard", "LOG_LEADERBOARD");
     }
 
     // --------------------------------------------------------
@@ -81,7 +89,7 @@ class QT_QuestLog : UIScriptedMenu
 
         if (m_history.Count() == 0)
         {
-            m_historyList.AddItem("No quests completed yet.", null, 0);
+            m_historyList.AddItem(QT_L10n.Key("LOG_EMPTY"), null, 0);
             return;
         }
 
@@ -101,11 +109,11 @@ class QT_QuestLog : UIScriptedMenu
 
         if (m_leaderboard.Count() == 0)
         {
-            m_leaderboardText.SetText("No leaderboard data yet.");
+            m_leaderboardText.SetText(QT_L10n.Key("LOG_NO_LEADERBOARD"));
             return;
         }
 
-        string txt = "-- Top Survivors --\n\n";
+        string txt = QT_L10n.T("LOG_TOP") + "\n\n";
         foreach (string line : m_leaderboard)
             txt += line + "\n";
         m_leaderboardText.SetText(txt);
@@ -139,7 +147,7 @@ class QT_QuestLog : UIScriptedMenu
     private void ShowHistoryDetail(QT_QuestLogEntry e)
     {
         if (!m_detailText) return;
-        string txt = e.questTitle + "\n\n" + "Completed: " + e.completedAt + "\n" + "Run #" + e.runNumber + "\n\n" + "Rewards received:\n  " + e.rewardSummary;
+        string txt = e.questTitle + "\n\n" + QT_L10n.T("LOG_COMPLETED") + ": " + e.completedAt + "\n" + QT_L10n.T("LOG_RUN") + " #" + e.runNumber + "\n\n" + QT_L10n.T("LOG_REWARDS_RECEIVED") + ":\n  " + e.rewardSummary;
         m_detailText.SetText(txt);
     }
 

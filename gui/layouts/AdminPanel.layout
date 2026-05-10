@@ -1,14 +1,272 @@
-<root>
-	<Widget name="AdminRoot" left="0.1" top="0.05" width="0.8" height="0.9">
-		<TextWidget name="AdminTitle" left="0.01" top="0.01" width="0.98" height="0.05" text="QuestTrader Admin" />
-		<TextListboxWidget name="PlayerList" left="0.01" top="0.07" width="0.45" height="0.5" />
-		<MultilineTextWidget name="PlayerDetail" left="0.47" top="0.07" width="0.52" height="0.2" text="" />
-		<MultilineTextWidget name="LogView" left="0.47" top="0.29" width="0.52" height="0.3" text="" />
-		<TextWidget name="StatusText" left="0.01" top="0.59" width="0.98" height="0.04" text="" />
-		<ButtonWidget name="BtnReloadConfig" left="0.01" top="0.65" width="0.22" height="0.05" text="Reload Config" />
-		<ButtonWidget name="BtnRespawnNPCs" left="0.25" top="0.65" width="0.22" height="0.05" text="Respawn NPCs" />
-		<ButtonWidget name="BtnResetQuest" left="0.49" top="0.65" width="0.22" height="0.05" text="Reset Quest" />
-		<ButtonWidget name="BtnWipePlayer" left="0.73" top="0.65" width="0.22" height="0.05" text="Wipe Player" />
-		<ButtonWidget name="BtnClose" left="0.79" top="0.90" width="0.18" height="0.06" text="Close" />
-	</Widget>
-</root>
+PanelWidgetClass root {
+ visible 1
+ ignorepointer 0
+ position 0 0
+ size 1 1
+ hexactpos 0
+ vexactpos 0
+ hexactsize 0
+ vexactsize 0
+ {
+  PanelWidgetClass AdminRoot {
+   visible 1
+   ignorepointer 0
+   color 0.08 0.08 0.08 0.94
+   position 0.10 0.05
+   size 0.80 0.90
+   hexactpos 0
+   vexactpos 0
+   hexactsize 0
+   vexactsize 0
+   style rover_sim_colorable
+   {
+    TextWidgetClass AdminTitle {
+     visible 1
+     ignorepointer 1
+     color 1 0.85 0.3 1
+     position 0.02 0.015
+     size 0.70 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     text "#QuestTrader_ADMIN_TITLE"
+     font "gui/fonts/sdf_MetronBook24"
+     "exact text" 1
+     "text valign" center
+    }
+    ButtonWidgetClass BtnClose {
+     visible 1
+     ignorepointer 0
+     color 0.35 0.08 0.08 1
+     position 0.94 0.018
+     size 0.04 0.045
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "X"
+     text_proportion 0.55
+    }
+    ButtonWidgetClass TabBtnPlayers {
+     visible 1
+     ignorepointer 0
+     color 0.18 0.18 0.18 1
+     position 0.02 0.085
+     size 0.18 0.045
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_PLAYERS"
+     text_proportion 0.34
+    }
+    ButtonWidgetClass TabBtnLogs {
+     visible 1
+     ignorepointer 0
+     color 0.18 0.18 0.18 1
+     position 0.205 0.085
+     size 0.18 0.045
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_LOGS"
+     text_proportion 0.34
+    }
+    PanelWidgetClass TabPlayers {
+     visible 1
+     ignorepointer 0
+     position 0.02 0.145
+     size 0.96 0.63
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     {
+      TextListboxWidgetClass PlayerList {
+       visible 1
+       ignorepointer 0
+       color 0.12 0.12 0.12 1
+       position 0 0
+       size 0.45 0.86
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       "title visible" 0
+       colums ""
+       font "gui"
+      }
+      MultilineTextWidgetClass PlayerDetail {
+       visible 1
+       ignorepointer 1
+       color 0.88 0.88 0.88 1
+       position 0.47 0
+       size 0.53 0.32
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/sdf_MetronBook24"
+       wrap 1
+      }
+      TextWidgetClass QuestIdLabel {
+       visible 1
+       ignorepointer 1
+       color 0.75 0.75 0.75 1
+       position 0.47 0.37
+       size 0.18 0.05
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "#QuestTrader_ADMIN_QUEST_ID"
+       "text valign" center
+      }
+      EditBoxWidgetClass QuestIdInput {
+       visible 1
+       ignorepointer 0
+       color 0.05 0.05 0.05 1
+       position 0.65 0.37
+       size 0.35 0.05
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/sdf_MetronBook24"
+      }
+     }
+    }
+    PanelWidgetClass TabLogs {
+     visible 0
+     ignorepointer 0
+     position 0.02 0.145
+     size 0.96 0.63
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     {
+      MultilineTextWidgetClass LogText {
+       visible 1
+       ignorepointer 1
+       color 0.82 0.92 0.82 1
+       position 0 0
+       size 1 1
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/sdf_MetronBook24"
+       wrap 1
+      }
+     }
+    }
+    ButtonWidgetClass BtnReloadConfig {
+     visible 1
+     ignorepointer 0
+     color 0.15 0.15 0.15 1
+     position 0.02 0.80
+     size 0.18 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_RELOAD"
+     text_proportion 0.30
+    }
+    ButtonWidgetClass BtnRespawnNPCs {
+     visible 1
+     ignorepointer 0
+     color 0.15 0.15 0.15 1
+     position 0.21 0.80
+     size 0.18 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_RESPAWN_NPCS"
+     text_proportion 0.26
+    }
+    ButtonWidgetClass BtnRefreshLog {
+     visible 1
+     ignorepointer 0
+     color 0.15 0.15 0.15 1
+     position 0.40 0.80
+     size 0.18 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_REFRESH_LOG"
+     text_proportion 0.26
+    }
+    ButtonWidgetClass BtnCompleteQuest {
+     visible 1
+     ignorepointer 0
+     color 0.10 0.30 0.10 1
+     position 0.02 0.86
+     size 0.29 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_COMPLETE_QUEST"
+     text_proportion 0.26
+    }
+    ButtonWidgetClass BtnResetQuest {
+     visible 1
+     ignorepointer 0
+     color 0.15 0.15 0.15 1
+     position 0.33 0.86
+     size 0.29 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_RESET_QUEST"
+     text_proportion 0.26
+    }
+    ButtonWidgetClass BtnWipePlayer {
+     visible 1
+     ignorepointer 0
+     color 0.35 0.08 0.08 1
+     position 0.64 0.86
+     size 0.34 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     style DayZDefaultButton
+     text "#QuestTrader_ADMIN_WIPE_PLAYER"
+     text_proportion 0.26
+    }
+    TextWidgetClass StatusLabel {
+     visible 1
+     ignorepointer 1
+     color 0.78 0.78 0.78 1
+     position 0.02 0.925
+     size 0.76 0.05
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     text ""
+     "text valign" center
+    }
+   }
+  }
+ }
+}

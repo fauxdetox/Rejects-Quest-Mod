@@ -31,11 +31,17 @@ enum QT_RPC
     CANCEL_QUEST       = 9115,
     INTERACT_TRADER    = 9113,
     TRADER_POSITIONS   = 9114,
-    REQUEST_POSITIONS  = 9116
+    REQUEST_POSITIONS  = 9116,
+    RECON_COMPLETE     = 9117,
+    REQUEST_JOURNAL    = 9118
 }
 
 class QT_RPCManager
 {
+    private static ref array<PlayerBase> s_pendingRefreshPlayers;
+    private static int                   s_pendingRefreshIndex;
+    private static const int             PLAYER_REFRESH_BATCH_SIZE = 4;
+
     // ====================================================
     //  SERVER -> CLIENT helpers
     // ====================================================
@@ -78,13 +84,15 @@ class QT_RPCManager
 
         foreach (QT_QuestDef def : quests)
         {
-            QT_QuestState state = mgr.GetEffectiveState(uid, def.id);
+            QT_QuestState state = mgr.GetDisplayState(player, def);
             rpc.Write(def.id);
+            rpc.Write(def.traderId);
             rpc.Write(def.title);
             rpc.Write(def.description);
             rpc.Write((int)def.type);
             rpc.Write((int)state);
             rpc.Write(def.acceptMessage);
+            rpc.Write(def.rewardMessage);
 
             int cdRemaining = 0;
             if (state == QT_QuestState.COOLDOWN && def.repeatable)
@@ -94,26 +102,61 @@ class QT_RPCManager
             }
             rpc.Write(cdRemaining);
 
-            rpc.Write(def.objectives.Count());
-            foreach (QT_Objective obj : def.objectives)
+            bool syntheticDeliveryObjective = (def.type == QT_QuestType.DELIVER && def.objectives.Count() == 0 && def.deliveryItemClass != "");
+            if (syntheticDeliveryObjective)
+                rpc.Write(1);
+            else
+                rpc.Write(def.objectives.Count());
+
+            if (syntheticDeliveryObjective)
             {
-                rpc.Write(obj.description);
-                rpc.Write(obj.requiredAmount);
-                int prog = 0;
-                if (def.type == QT_QuestType.KILL)
+                rpc.Write(QT_L10nKey("OBJECTIVE_DELIVER") + " 1x " + def.deliveryItemClass);
+                rpc.Write(1);
+                int deliverProg = 0;
+                if (state == QT_QuestState.COMPLETED)
+                    deliverProg = 1;
+                else if (mgr.CountItemsInInventory(player, def.deliveryItemClass) > 0)
+                    deliverProg = 1;
+                rpc.Write(deliverProg);
+            }
+            else
+            {
+                foreach (QT_Objective obj : def.objectives)
                 {
-                    auto qs2 = mgr.GetPlayerQuestState(uid, def.id);
-                    int idx = def.objectives.Find(obj);
-                    if (idx >= 0 && idx < qs2.objectiveProgress.Count())
-                        prog = qs2.objectiveProgress[idx];
+                    rpc.Write(BuildObjectiveTokenText(def, obj));
+                    rpc.Write(obj.requiredAmount);
+                    int prog = 0;
+                    if (def.type == QT_QuestType.KILL)
+                    {
+                        auto qs2 = mgr.GetPlayerQuestState(uid, def.id);
+                        int idx = def.objectives.Find(obj);
+                        if (idx >= 0 && idx < qs2.objectiveProgress.Count())
+                            prog = qs2.objectiveProgress[idx];
+                    }
+                    else if (def.type == QT_QuestType.COLLECT)
+                    {
+                        if (state == QT_QuestState.COMPLETED && def.id == "quest_179")
+                        {
+                            prog = obj.requiredAmount;
+                        }
+                        else
+                        {
+                            prog = mgr.CountItemsInInventory(player, obj.itemClassName);
+                            if (prog > obj.requiredAmount) prog = obj.requiredAmount;
+                        }
+                    }
+                    else if (def.type == QT_QuestType.DELIVER)
+                    {
+                        if (state == QT_QuestState.COMPLETED)
+                            prog = obj.requiredAmount;
+                        else if (obj.itemClassName != "")
+                        {
+                            prog = mgr.CountItemsInInventory(player, obj.itemClassName);
+                            if (prog > obj.requiredAmount) prog = obj.requiredAmount;
+                        }
+                    }
+                    rpc.Write(prog);
                 }
-                else if (def.type == QT_QuestType.COLLECT)
-                {
-                    // Count items currently in player inventory
-                    prog = mgr.CountItemsInInventory(player, obj.itemClassName);
-                    if (prog > obj.requiredAmount) prog = obj.requiredAmount;
-                }
-                rpc.Write(prog);
             }
 
             rpc.Write(def.rewards.Count());
@@ -150,26 +193,107 @@ class QT_RPCManager
 
         foreach (QT_QuestDef def : active)
         {
-            QT_QuestState state = mgr.GetEffectiveState(uid, def.id);
+            QT_QuestState state = mgr.GetDisplayState(player, def);
+            rpc.Write(def.id);
             rpc.Write(def.title);
             rpc.Write((int)state);
             rpc.Write((int)def.type);
-            rpc.Write(def.objectives.Count());
-            foreach (int idx, QT_Objective obj : def.objectives)
+            bool syntheticDeliveryObjective = (def.type == QT_QuestType.DELIVER && def.objectives.Count() == 0 && def.deliveryItemClass != "");
+            if (syntheticDeliveryObjective)
+                rpc.Write(1);
+            else
+                rpc.Write(def.objectives.Count());
+
+            if (syntheticDeliveryObjective)
             {
-                rpc.Write(obj.description);
-                rpc.Write(obj.requiredAmount);
-                int prog = 0;
-                if (def.type == QT_QuestType.KILL)
+                rpc.Write(QT_L10nKey("OBJECTIVE_DELIVER") + " 1x " + def.deliveryItemClass);
+                rpc.Write(1);
+                int deliverProg = 0;
+                if (state == QT_QuestState.COMPLETED)
+                    deliverProg = 1;
+                else if (mgr.CountItemsInInventory(player, def.deliveryItemClass) > 0)
+                    deliverProg = 1;
+                rpc.Write(deliverProg);
+            }
+            else
+            {
+                foreach (int idx, QT_Objective obj : def.objectives)
                 {
-                    auto qs = mgr.GetPlayerQuestState(uid, def.id);
-                    if (idx < qs.objectiveProgress.Count()) prog = qs.objectiveProgress[idx];
+                    rpc.Write(BuildObjectiveTokenText(def, obj));
+                    rpc.Write(obj.requiredAmount);
+                    int prog = 0;
+                    if (def.type == QT_QuestType.KILL)
+                    {
+                        auto qs = mgr.GetPlayerQuestState(uid, def.id);
+                        if (idx < qs.objectiveProgress.Count()) prog = qs.objectiveProgress[idx];
+                    }
+                    else if (def.type == QT_QuestType.COLLECT)
+                    {
+                        if (state == QT_QuestState.COMPLETED)
+                            prog = obj.requiredAmount;
+                        else
+                        {
+                            prog = mgr.CountItemsInInventory(player, obj.itemClassName);
+                            if (prog > obj.requiredAmount) prog = obj.requiredAmount;
+                        }
+                    }
+                    else if (def.type == QT_QuestType.DELIVER)
+                    {
+                        if (state == QT_QuestState.COMPLETED)
+                            prog = obj.requiredAmount;
+                        else if (obj.itemClassName != "")
+                        {
+                            prog = mgr.CountItemsInInventory(player, obj.itemClassName);
+                            if (prog > obj.requiredAmount) prog = obj.requiredAmount;
+                        }
+                    }
+                    rpc.Write(prog);
                 }
-                rpc.Write(prog);
             }
         }
 
         rpc.Send(player, QT_RPC.HUD_UPDATE, true, player.GetIdentity());
+    }
+
+    static void QueuePlayerRefresh()
+    {
+        if (!GetGame().IsServer()) return;
+
+        s_pendingRefreshPlayers = new array<PlayerBase>();
+        s_pendingRefreshIndex = 0;
+
+        array<Man> players = new array<Man>();
+        GetGame().GetPlayers(players);
+        foreach (Man man : players)
+        {
+            PlayerBase pb = PlayerBase.Cast(man);
+            if (pb && pb.GetIdentity())
+                s_pendingRefreshPlayers.Insert(pb);
+        }
+
+        ProcessQueuedPlayerRefresh();
+    }
+
+    private static void ProcessQueuedPlayerRefresh()
+    {
+        if (!s_pendingRefreshPlayers) return;
+
+        int sent = 0;
+        while (s_pendingRefreshIndex < s_pendingRefreshPlayers.Count() && sent < PLAYER_REFRESH_BATCH_SIZE)
+        {
+            PlayerBase pb = s_pendingRefreshPlayers[s_pendingRefreshIndex];
+            s_pendingRefreshIndex++;
+            sent++;
+
+            if (!pb || !pb.GetIdentity()) continue;
+            SendTraderPositions(pb);
+            SendHUDUpdate(pb);
+        }
+
+        if (s_pendingRefreshIndex < s_pendingRefreshPlayers.Count())
+            GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(ProcessQueuedPlayerRefresh, 250, false);
+        else
+            s_pendingRefreshPlayers = null;
     }
 
     static void SendToast(PlayerBase player, string message, int toastType)
@@ -204,16 +328,66 @@ class QT_RPCManager
         rpc.Send(player, QT_RPC.QUEST_LOG, true, player.GetIdentity());
     }
 
+    static void SendJournal(PlayerBase player)
+    {
+        if (!GetGame().IsServer()) return;
+
+        string uid = player.GetIdentity().GetId();
+        string pname = player.GetIdentity().GetName();
+
+        ref QT_PlayerHistory hist = QT_QuestHistory.GetInstance().GetHistory(uid, pname);
+        QT_QuestManager mgr = QT_QuestManager.GetInstance();
+        QT_Config cfg = mgr.GetConfig();
+
+        ScriptRPC rpc = new ScriptRPC();
+        rpc.Write(hist.entries.Count());
+        foreach (QT_HistoryEntry e : hist.entries)
+        {
+            // Resolve trader name via quest def -> trader id -> TraderNPCPositions
+            QT_QuestDef def = mgr.GetQuestDef(e.questId);
+            string traderName = "";
+            if (def && cfg)
+            {
+                foreach (QT_TraderDef td : cfg.TraderNPCPositions)
+                {
+                    if (td.id == def.traderId)
+                    {
+                        traderName = td.name;
+                        break;
+                    }
+                }
+            }
+            // Send rewardMessage (quest flavour text) not the item reward summary
+            string rewardMsg = "";
+            if (def) rewardMsg = def.rewardMessage;
+            rpc.Write(e.questTitle);
+            rpc.Write(traderName);
+            rpc.Write(rewardMsg);
+        }
+        rpc.Send(player, QT_RPC.REQUEST_JOURNAL, true, player.GetIdentity());
+    }
+
     static void SendAdminPlayerData(PlayerBase admin)
     {
         if (!GetGame().IsServer()) return;
+        if (!IsQuestAdmin(admin))
+        {
+            SendToast(admin, "QuestTrader admin access denied.", QT_ToastType.WARNING);
+            return;
+        }
 
         array<Man> players = new array<Man>();
         GetGame().GetPlayers(players);
         QT_QuestManager mgr = QT_QuestManager.GetInstance();
 
         ScriptRPC rpc = new ScriptRPC();
-        rpc.Write(players.Count());
+        int validPlayerCount = 0;
+        foreach (Man countMan : players)
+        {
+            PlayerBase countPb = PlayerBase.Cast(countMan);
+            if (countPb && countPb.GetIdentity()) validPlayerCount++;
+        }
+        rpc.Write(validPlayerCount);
         foreach (Man man : players)
         {
             PlayerBase pb = PlayerBase.Cast(man);
@@ -233,6 +407,11 @@ class QT_RPCManager
     static void SendAdminLog(PlayerBase admin)
     {
         if (!GetGame().IsServer()) return;
+        if (!IsQuestAdmin(admin))
+        {
+            SendToast(admin, "QuestTrader admin access denied.", QT_ToastType.WARNING);
+            return;
+        }
         array<string> lines = QT_Logger.GetInstance().GetRecentLines(50);
         ScriptRPC rpc = new ScriptRPC();
         rpc.Write(lines.Count());
@@ -250,6 +429,13 @@ class QT_RPCManager
         ScriptRPC rpc = new ScriptRPC();
         rpc.Write(questId);
         rpc.Send(null, QT_RPC.ACCEPT_QUEST, true);
+    }
+
+    static void RequestReconComplete(string questId)
+    {
+        ScriptRPC rpc = new ScriptRPC();
+        rpc.Write(questId);
+        rpc.Send(null, QT_RPC.RECON_COMPLETE, true);
     }
 
     static void RequestCancelQuest(string questId)
@@ -275,6 +461,14 @@ class QT_RPCManager
         ScriptRPC rpc = new ScriptRPC();
         rpc.Write(0);
         rpc.Send(null, QT_RPC.QUEST_LOG, true);
+    }
+
+    static void RequestJournal()
+    {
+        if (!GetGame().IsClient()) return;
+        ScriptRPC rpc = new ScriptRPC();
+        rpc.Write(0);
+        rpc.Send(null, QT_RPC.REQUEST_JOURNAL, true);
     }
 
     static void RequestTraderPositions()
@@ -350,7 +544,7 @@ class QT_RPCManager
         {
             foreach (QT_Objective obj : def.objectives)
             {
-                SendChatLine(player, "  [ ] " + obj.description + " (0/" + obj.requiredAmount + ")");
+                SendChatLine(player, "  [ ] " + BuildObjectiveDisplayText(def, obj) + " (0/" + obj.requiredAmount + ")");
             }
             string turnInName = def.traderId;
             if (cfg)
@@ -379,6 +573,12 @@ class QT_RPCManager
             pos[1] = GetGame().SurfaceY(pos[0], pos[2]);
             rpc.Write(pos);
             rpc.Write(cfg.Settings.interactionDistance);
+            rpc.Write(def.name);
+            // Pick a random greeting to send with positions
+            string greeting = def.greeting;
+            if (def.greetings && def.greetings.Count() > 0)
+                greeting = def.greetings[Math.RandomInt(0, def.greetings.Count())];
+            rpc.Write(greeting);
         }
         rpc.Send(player, QT_RPC.TRADER_POSITIONS, true, player.GetIdentity());
     }
@@ -414,6 +614,12 @@ class QT_RPCManager
             if (!ctx.Read(cancelId)) return;
             QT_QuestManager.GetInstance().CancelQuest(player, cancelId);
         }
+        else if (rpcType == QT_RPC.RECON_COMPLETE)
+        {
+            string reconQuestId;
+            if (!ctx.Read(reconQuestId)) return;
+            QT_QuestManager.GetInstance().CompleteReconObjective(player, reconQuestId);
+        }
         else if (rpcType == QT_RPC.TURN_IN_QUEST)
         {
             string questId2;
@@ -439,7 +645,7 @@ class QT_RPCManager
                             if (td.id == def.deliveryTraderId) { deliveryName = td.name; break; }
                         }
                     }
-                    QT_RPCManager.SendToast(player, "Deliver this to: " + deliveryName, QT_ToastType.WARNING);
+                    QT_RPCManager.SendToast(player, QT_L10nKey("TOAST_DELIVER_THIS_TO") + " " + deliveryName, QT_ToastType.WARNING);
                     return;
                 }
                 QT_QuestManager.GetInstance().TurnInDeliverQuest(player, questId2);
@@ -451,12 +657,26 @@ class QT_RPCManager
         {
             SendQuestLog(player);
         }
+        else if (rpcType == QT_RPC.REQUEST_JOURNAL)
+        {
+            SendJournal(player);
+        }
         else if (rpcType == QT_RPC.REQUEST_ADMIN_DATA)
         {
+            if (!IsQuestAdmin(player))
+            {
+                SendToast(player, "QuestTrader admin access denied.", QT_ToastType.WARNING);
+                return;
+            }
             SendAdminPlayerData(player);
         }
         else if (rpcType == QT_RPC.REQUEST_ADMIN_LOG)
         {
+            if (!IsQuestAdmin(player))
+            {
+                SendToast(player, "QuestTrader admin access denied.", QT_ToastType.WARNING);
+                return;
+            }
             SendAdminLog(player);
         }
         else if (rpcType == QT_RPC.INTERACT_TRADER)
@@ -482,13 +702,17 @@ class QT_RPCManager
 
     private static void DispatchAdminCommand(PlayerBase admin, ParamsReadContext ctx)
     {
-        // Admin check: player must be whitelisted admin on the server
-        // DayZ does not expose IsAdministrator() on PlayerIdentity in script.
-        // Use a simple UID whitelist approach via config, or allow all for now.
         string cmd, targetUID, param;
         if (!ctx.Read(cmd))       return;
         if (!ctx.Read(targetUID)) return;
         if (!ctx.Read(param))     return;
+
+        if (!IsQuestAdmin(admin))
+        {
+            SendToast(admin, "QuestTrader admin access denied.", QT_ToastType.WARNING);
+            QT_Logger.GetInstance().Warn("ADMIN", "Blocked admin command '" + cmd + "'", admin.GetIdentity().GetId(), admin.GetIdentity().GetName());
+            return;
+        }
 
         QT_QuestManager mgr = QT_QuestManager.GetInstance();
         string adminName = admin.GetIdentity().GetName();
@@ -497,9 +721,16 @@ class QT_RPCManager
         if (cmd == "RESET_QUEST")
         {
             mgr.AdminResetQuest(targetUID, param);
-            QT_Logger.GetInstance().Info("ADMIN", "Reset quest '" + param + "' for " + targetUID, adminUID, adminName);
+            QT_Logger.GetInstance().Info("ADMIN", "Reset quest (input: '" + param + "') for " + targetUID, adminUID, adminName);
             SendAdminPlayerData(admin);
             SendToast(admin, "Quest reset.", QT_ToastType.INFO);
+        }
+        else if (cmd == "COMPLETE_QUEST")
+        {
+            mgr.AdminCompleteQuest(targetUID, param);
+            QT_Logger.GetInstance().Info("ADMIN", "Force-completed quest (input: '" + param + "') for " + targetUID, adminUID, adminName);
+            SendAdminPlayerData(admin);
+            SendToast(admin, "Quest completed for player.", QT_ToastType.INFO);
         }
         else if (cmd == "WIPE_PLAYER")
         {
@@ -511,12 +742,144 @@ class QT_RPCManager
         else if (cmd == "RELOAD_CONFIG")
         {
             QT_Logger.GetInstance().Info("ADMIN", "Config reload by " + adminName);
-            SendToast(admin, "Restart required for full reload.", QT_ToastType.WARNING);
+            bool reloadOk = mgr.ReloadConfig();
+            if (reloadOk)
+            {
+                QT_TraderSpawner.GetActiveSpawner().RespawnAllChunked(mgr.GetConfig());
+                QueuePlayerRefresh();
+                SendAdminPlayerData(admin);
+                SendToast(admin, "QuestTrader config reloaded.", QT_ToastType.INFO);
+            }
+            else
+            {
+                SendToast(admin, "QuestTrader config reload failed. Check logs.", QT_ToastType.WARNING);
+            }
         }
         else if (cmd == "RESPAWN_NPCS")
         {
             QT_Logger.GetInstance().Info("ADMIN", "NPC respawn by " + adminName);
-            SendToast(admin, "NPCs respawned.", QT_ToastType.INFO);
+            QT_TraderSpawner.GetActiveSpawner().RespawnAllChunked(mgr.GetConfig());
+            QueuePlayerRefresh();
+            SendToast(admin, "NPC respawn started.", QT_ToastType.INFO);
         }
+    }
+
+    static bool IsQuestAdmin(PlayerBase player)
+    {
+        if (!player || !player.GetIdentity()) return false;
+
+        if (IsQuestAdminUID(player.GetIdentity().GetId()))
+            return true;
+
+        string plainId = player.GetIdentity().GetPlainId();
+        if (plainId != "" && IsQuestAdminUID(plainId))
+            return true;
+
+        return false;
+    }
+
+    static bool IsQuestAdminUID(string uid)
+    {
+        uid = uid.Trim();
+        if (uid == "") return false;
+
+        QT_Config cfg = QT_QuestManager.GetInstance().GetConfig();
+        if (cfg && cfg.AdminSteamIds)
+        {
+            foreach (string adminId : cfg.AdminSteamIds)
+            {
+                if (adminId.Trim() == uid) return true;
+            }
+        }
+
+        if (IsAdminUIDInQuestConfig("$profile:QuestTrader/QuestConfig.json", uid)) return true;
+        if (IsAdminUIDInQuestConfig("QuestTrader/config/QuestConfig.json", uid)) return true;
+        return false;
+    }
+
+    private static bool IsAdminUIDInQuestConfig(string path, string uid)
+    {
+        if (!FileExist(path)) return false;
+
+        string json = QT_JsonHelper.ReadFileToString(path);
+        if (json == "") return false;
+
+        ref QT_Config cfg;
+        string err;
+        JsonSerializer ser = new JsonSerializer();
+        if (!ser.ReadFromString(cfg, json, err)) return false;
+        if (!cfg || !cfg.AdminSteamIds) return false;
+
+        foreach (string adminId : cfg.AdminSteamIds)
+        {
+            if (adminId.Trim() == uid) return true;
+        }
+        return false;
+    }
+
+    static string GetDisplayName(string className)
+    {
+        if (className == "") return "";
+
+        string displayName = "";
+        GetGame().ConfigGetText("CfgVehicles " + className + " displayName", displayName);
+        if (displayName != "") return displayName;
+
+        GetGame().ConfigGetText("CfgWeapons " + className + " displayName", displayName);
+        if (displayName != "") return displayName;
+
+        GetGame().ConfigGetText("CfgMagazines " + className + " displayName", displayName);
+        if (displayName != "") return displayName;
+
+        return className;
+    }
+
+    static string BuildObjectiveDisplayText(QT_QuestDef def, QT_Objective obj)
+    {
+        if (!def || !obj) return "";
+
+        if (obj.itemClassName != "")
+        {
+            string itemName = GetDisplayName(obj.itemClassName);
+            if (def.type == QT_QuestType.DELIVER)
+                return "Deliver " + obj.requiredAmount.ToString() + "x " + itemName;
+            return "Collect " + obj.requiredAmount.ToString() + "x " + itemName;
+        }
+
+        if (def.type == QT_QuestType.KILL && obj.description != "")
+            return obj.description;
+
+        if (obj.entityClassName != "")
+            return obj.description;
+
+        return obj.description;
+    }
+
+    static string BuildObjectiveTokenText(QT_QuestDef def, QT_Objective obj)
+    {
+        if (!def || !obj) return "";
+
+        if (obj.itemClassName != "")
+        {
+            if (def.type == QT_QuestType.DELIVER)
+                return QT_L10nKey("OBJECTIVE_DELIVER") + " " + obj.requiredAmount.ToString() + "x " + obj.itemClassName;
+            return QT_L10nKey("OBJECTIVE_COLLECT") + " " + obj.requiredAmount.ToString() + "x " + obj.itemClassName;
+        }
+
+        if (def.type == QT_QuestType.KILL && obj.entityClassName == "QT_ReconObjective")
+            return QT_L10nKey("OBJECTIVE_RECON");
+
+        if (def.type == QT_QuestType.KILL && obj.entityClassName != "")
+            return QT_L10nKey("OBJECTIVE_KILL") + " " + obj.requiredAmount.ToString() + "x " + obj.entityClassName;
+
+        if (obj.entityClassName != "")
+            return obj.description;
+
+        return obj.description;
+    }
+
+    private static string QT_L10nKey(string id)
+    {
+        return "#QuestTrader_" + id;
     }
 }

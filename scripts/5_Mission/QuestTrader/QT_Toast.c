@@ -43,7 +43,7 @@ class QT_Toast
     private Widget               m_root;
     private ref array<Widget>         m_panels;
     private ref array<TextWidget>     m_labels;
-    private ref array<ImageWidget>    m_bars;   // left accent strip
+    private ref array<Widget>         m_bars;   // left accent strip
 
     static QT_Toast GetInstance()
     {
@@ -58,7 +58,7 @@ class QT_Toast
         m_active = new array<ref QT_ToastEntry>();
         m_panels = new array<Widget>();
         m_labels = new array<TextWidget>();
-        m_bars   = new array<ImageWidget>();
+        m_bars   = new array<Widget>();
     }
 
     // --------------------------------------------------------
@@ -75,7 +75,7 @@ class QT_Toast
             TextWidget lbl = TextWidget.Cast(layoutRoot.FindAnyWidget("ToastText" + i.ToString()));
             if (lbl) m_labels.Insert(lbl);
 
-            ImageWidget bar = ImageWidget.Cast(layoutRoot.FindAnyWidget("ToastBar" + i.ToString()));
+            Widget bar = layoutRoot.FindAnyWidget("ToastBar" + i.ToString());
             if (bar) m_bars.Insert(bar);
         }
     }
@@ -146,7 +146,7 @@ class QT_Toast
 
         if (slot < m_labels.Count())
         {
-            m_labels[slot].SetText(e.message);
+            m_labels[slot].SetText(QT_L10n.ResolveText(e.message));
             m_labels[slot].SetColor(GetTypeColor(e.type));
         }
 

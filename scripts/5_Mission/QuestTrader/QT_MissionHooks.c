@@ -175,7 +175,7 @@ modded class MissionServer
                             }
                             string tick = "[ ] ";
                             if (prog >= obj.requiredAmount) tick = "[x] ";
-                            string objLine = "  " + tick + obj.description + " (" + prog + "/" + obj.requiredAmount + ")";
+                            string objLine = "  " + tick + QT_RPCManager.BuildObjectiveDisplayText(def, obj) + " (" + prog + "/" + obj.requiredAmount + ")";
                             QT_RPCManager.SendChatLine(player, objLine);
                         }
                         // Show which trader to return to
@@ -212,21 +212,43 @@ modded class MissionGameplay
     private ref array<string>  m_qt_traderIds;
     private ref array<vector>  m_qt_traderPositions;
     private float              m_qt_maxDist = 3.5;
-    private ref QT_QuestMenu  m_questMenu;  // chat-based, not UIScriptedMenu
+    private ref QT_QuestMenu  m_questMenu;
     private ref QT_QuestHUD   m_questHUD;
     private ref QT_QuestLog   m_questLog;
+    private ref QT_Journal    m_journal;
     private ref QT_AdminPanel m_adminPanel;
+    private bool              m_qt_journalToggleDown = false;
     private bool m_qt_initDone = false;
     private Widget            m_toastRoot;
+    private bool              m_qt_hudToggleDown = false;
+    private bool              m_qt_adminToggleDown = false;
     private string            m_qt_nearbyTraderId = "";
     private bool              m_qt_hintShown = false;
     private TextWidget        m_qt_hintWidget = null;
+    private ref map<string, string> m_qt_traderNames    = new map<string, string>();
+    private ref map<string, string> m_qt_traderGreetings = new map<string, string>();
+    private ref map<string, float>  m_qt_greetingCooldowns = new map<string, float>();
+
+    // Recon timer — supports multiple recon quests
+    private static const float  RECON_DURATION     = 60.0;
+    private float               m_reconTimer       = 0;
+    private bool                m_reconActive      = false;
+    private string              m_activeReconQuest = ""; // which recon quest is in progress
+    private bool                m_recon179Done     = false;
+    private bool                m_recon201Done     = false;
 
     override void OnInit()
     {
         super.OnInit();
         QT_ClientRPCDispatcherBase.s_instance = new QT_ClientRPCDispatcher();
         LoadTraderPositionsFromConfig();
+
+        m_toastRoot = GetGame().GetWorkspace().CreateWidgets("QuestTrader/gui/layouts/QuestToast.layout");
+        if (m_toastRoot)
+            QT_Toast.GetInstance().Init(m_toastRoot);
+
+        m_questHUD = new QT_QuestHUD();
+        m_questHUD.Init();
     }
 
     override void OnEvent(EventType eventTypeId, Param params)
@@ -263,6 +285,7 @@ modded class MissionGameplay
         // Always create the hint widget - positions will arrive via TRADER_POSITIONS RPC
         Widget hintRoot = GetGame().GetWorkspace().CreateWidgets("QuestTrader/gui/layouts/QuestHint.layout");
         if (hintRoot) m_qt_hintWidget = TextWidget.Cast(hintRoot.FindAnyWidget("QTHint"));
+        if (m_qt_hintWidget) m_qt_hintWidget.SetText(QT_L10n.Key("HINT_INTERACT"));
         if (m_qt_hintWidget) m_qt_hintWidget.Show(false);
 
         Print("[QuestTrader] Client: hint widget ready, awaiting trader positions from server.");
@@ -276,6 +299,35 @@ modded class MissionGameplay
         super.OnUpdate(timeslice);
         QT_Toast.GetInstance().Update(timeslice);
         if (!GetGame().IsClient()) return;
+
+        bool hudTogglePressed = (KeyState(KeyCode.KC_O) == 1);
+        if (hudTogglePressed && !m_qt_hudToggleDown && m_questHUD && !m_questMenu)
+            m_questHUD.ToggleVisible();
+        m_qt_hudToggleDown = hudTogglePressed;
+
+        // Journal key disabled for now - will be re-enabled in a future update
+        // bool journalPressed = (KeyState(KeyCode.KC_APOSTROPHE) == 1);
+        // if (journalPressed && !m_qt_journalToggleDown && !m_questMenu && !m_adminPanel)
+        // {
+        //     if (m_journal)
+        //         CloseJournal();
+        //     else
+        //         QT_RPCManager.RequestJournal();
+        // }
+        // m_qt_journalToggleDown = journalPressed;
+
+        if (m_journal && KeyState(KeyCode.KC_ESCAPE) == 1)
+            CloseJournal();
+
+        bool adminTogglePressed = (KeyState(KeyCode.KC_INSERT) == 1);
+        if (adminTogglePressed && !m_qt_adminToggleDown && !m_questMenu)
+        {
+            if (m_adminPanel)
+                QT_CloseAdminPanel();
+            else
+                QT_RPCManager.RequestAdminData();
+        }
+        m_qt_adminToggleDown = adminTogglePressed;
 
         // After 3 seconds, request trader positions from server (ensures RPC dispatcher is ready)
         if (!m_qt_positionsRequested)
@@ -304,7 +356,31 @@ modded class MissionGameplay
         if (closestId != m_qt_nearbyTraderId)
         {
             if (m_qt_hintWidget)
+            {
+                if (closestId != "") m_qt_hintWidget.SetText(QT_L10n.Key("HINT_INTERACT"));
                 m_qt_hintWidget.Show(closestId != "" && !m_questMenu);
+            }
+
+            // Fire greeting in chat when entering a trader's range
+            if (closestId != "" && m_qt_traderGreetings.Contains(closestId))
+            {
+                float now = GetGame().GetTime() / 1000.0;
+                float lastGreet = 0;
+                if (m_qt_greetingCooldowns.Contains(closestId))
+                    lastGreet = m_qt_greetingCooldowns.Get(closestId);
+
+                if (now - lastGreet >= 30.0)
+                {
+                    string greet = m_qt_traderGreetings.Get(closestId);
+                    string tName = m_qt_traderNames.Get(closestId);
+                    if (greet != "")
+                    {
+                        ChatMessageEventParams chatEvent = new ChatMessageEventParams(CCDirect, tName, greet, "");
+                        GetGame().GetMission().OnEvent(ChatMessageEventTypeID, chatEvent);
+                        m_qt_greetingCooldowns.Set(closestId, now);
+                    }
+                }
+            }
         }
         // Keep hint hidden while menu is open
         if (m_qt_hintWidget && m_questMenu) m_qt_hintWidget.Show(false);
@@ -316,6 +392,92 @@ modded class MissionGameplay
         {
             if (GetGame().GetInput().LocalPress("UAAction", false))
                 QT_RPCManager.RequestInteractTrader(m_qt_nearbyTraderId);
+        }
+
+        // ── Recon timers ───────────────────────────────────────────
+        // quest_179 — Rify Lighthouse
+        vector recon179Pos = Vector(13989.0, 32.38, 11221.1);
+        // quest_201 — NWAF ATC Tower
+        vector recon201Pos = Vector(4627.25, 358.942, 10429.3);
+
+        // Determine which recon quest is currently active (if any)
+        string activeRecon = "";
+        vector activeReconPos;
+        bool reconDone = false;
+
+        if (!m_recon179Done && vector.Distance(player.GetPosition(), recon179Pos) <= 5.0)
+        {
+            activeRecon = "quest_179";
+            activeReconPos = recon179Pos;
+            reconDone = m_recon179Done;
+        }
+        else if (!m_recon201Done && vector.Distance(player.GetPosition(), recon201Pos) <= 5.0)
+        {
+            activeRecon = "quest_201";
+            activeReconPos = recon201Pos;
+            reconDone = m_recon201Done;
+        }
+
+        // Reset timer if player switched recon zones
+        if (activeRecon != "" && m_activeReconQuest != "" && activeRecon != m_activeReconQuest)
+        {
+            m_reconTimer = 0;
+            m_reconActive = false;
+        }
+        m_activeReconQuest = activeRecon;
+
+        if (activeRecon != "")
+        {
+            EntityAI heldItem = player.GetItemInHands();
+            bool holdingBinos = heldItem && heldItem.GetType() == "Binoculars";
+            bool aiming = holdingBinos && GetGame().GetInput().LocalValue("UAFire", false) > 0.5;
+
+            if (holdingBinos && aiming)
+            {
+                m_reconActive = true;
+                m_reconTimer += timeslice;
+
+                int remaining = Math.Max(0, RECON_DURATION - m_reconTimer);
+
+                if (m_qt_hintWidget)
+                {
+                    m_qt_hintWidget.SetText(QT_L10n.T("RECON_SCANNING") + "... " + remaining + QT_L10n.T("RECON_REMAINING"));
+                    m_qt_hintWidget.Show(true);
+                }
+
+                if (m_reconTimer >= RECON_DURATION)
+                {
+                    m_reconTimer = 0;
+                    m_reconActive = false;
+                    if (activeRecon == "quest_179") m_recon179Done = true;
+                    if (activeRecon == "quest_201") m_recon201Done = true;
+                    if (m_qt_hintWidget) { m_qt_hintWidget.SetText(""); m_qt_hintWidget.Show(false); }
+                    QT_RPCManager.RequestReconComplete(activeRecon);
+                    Print("[QuestTrader] Recon complete for " + activeRecon);
+                }
+            }
+            else if (m_qt_hintWidget)
+            {
+                string hint = "";
+                if (!holdingBinos)
+                    hint = QT_L10n.T("RECON_START");
+                else
+                    hint = QT_L10n.T("RECON_START");
+
+                if (m_reconActive)
+                {
+                    int rem = Math.Max(0, RECON_DURATION - m_reconTimer);
+                    hint = QT_L10n.T("RECON_PAUSED") + ": " + rem + QT_L10n.T("RECON_REMAINING") + ". " + QT_L10n.T("RECON_CONTINUE");
+                }
+
+                m_qt_hintWidget.SetText(hint);
+                m_qt_hintWidget.Show(true);
+            }
+        }
+        else if (m_qt_hintWidget && m_qt_nearbyTraderId == "")
+        {
+            // Not in any recon zone — hide hint
+            if (m_reconActive) { m_qt_hintWidget.Show(false); m_reconActive = false; }
         }
     }
 
@@ -329,6 +491,15 @@ modded class MissionGameplay
         if (m_qt_hintWidget && m_qt_nearbyTraderId != "") m_qt_hintWidget.Show(true);
     }
 
+    void QT_CloseAdminPanel()
+    {
+        if (m_adminPanel)
+        {
+            GetGame().GetUIManager().HideScriptedMenu(m_adminPanel);
+            m_adminPanel = null;
+        }
+    }
+
     // Called by QT_DayZGameHook when the client receives an RPC
     void QT_HandleClientRPC(int rpc_type, ParamsReadContext ctx)
     {
@@ -338,6 +509,7 @@ modded class MissionGameplay
         else if (rpc_type == QT_RPC.HUD_UPDATE)    ParseAndUpdateHUD(ctx);
         else if (rpc_type == QT_RPC.TOAST)         ParseAndShowToast(ctx);
         else if (rpc_type == QT_RPC.QUEST_LOG)     ParseAndShowQuestLog(ctx);
+        else if (rpc_type == QT_RPC.REQUEST_JOURNAL) ParseAndShowJournal(ctx);
         else if (rpc_type == QT_RPC.ADMIN_PLAYER_DATA) ParseAndShowAdminPlayers(ctx);
         else if (rpc_type == QT_RPC.ADMIN_LOG_DATA)    ParseAndShowAdminLog(ctx);
     }
@@ -359,11 +531,13 @@ modded class MissionGameplay
             int typeInt, stateInt, objCount, rewCount, cdRemaining;
 
             ctx.Read(entry.questId);
+            ctx.Read(entry.traderId);
             ctx.Read(entry.title);
             ctx.Read(entry.description);
             ctx.Read(typeInt);    entry.type  = typeInt;
             ctx.Read(stateInt);   entry.state = stateInt;
             ctx.Read(entry.acceptMessage);
+            ctx.Read(entry.rewardMessage);
             ctx.Read(cdRemaining); entry.cooldownRemaining = cdRemaining;
 
             ctx.Read(objCount);
@@ -371,7 +545,7 @@ modded class MissionGameplay
             {
                 string desc; int req, prog;
                 ctx.Read(desc); ctx.Read(req); ctx.Read(prog);
-                entry.objectiveDescs.Insert(desc);
+                entry.objectiveDescs.Insert(QT_L10n.ResolveText(desc));
                 entry.objectiveRequired.Insert(req);
                 entry.objectiveProgress.Insert(prog);
             }
@@ -381,7 +555,7 @@ modded class MissionGameplay
             {
                 string rewClass; int rewAmt;
                 ctx.Read(rewClass); ctx.Read(rewAmt);
-                entry.rewardDescs.Insert(rewAmt.ToString() + "x " + rewClass);
+                entry.rewardDescs.Insert(rewAmt.ToString() + "x " + QT_L10n.ResolveText(rewClass));
             }
 
             int prereqCount;
@@ -397,6 +571,10 @@ modded class MissionGameplay
             quests.Insert(entry);
         }
 
+        // Store trader name and greeting for proximity chat
+        m_qt_traderNames.Set(traderId, traderName);
+        m_qt_traderGreetings.Set(traderId, greeting);
+
         if (!m_questMenu)
         {
             m_questMenu = new QT_QuestMenu();
@@ -404,6 +582,16 @@ modded class MissionGameplay
         }
         m_questMenu.SetQuestData(traderId, traderName, quests);
         if (m_qt_hintWidget) m_qt_hintWidget.Show(false);
+
+        // If quest_179 is already COMPLETED, mark recon as done so the
+        // hint/timer doesn't activate after a relog
+        foreach (QT_QuestEntryUI qEntry : quests)
+        {
+            if (qEntry.questId == "quest_179" && qEntry.state == QT_QuestState.COMPLETED)
+                m_recon179Done = true;
+            if (qEntry.questId == "quest_201" && qEntry.state == QT_QuestState.COMPLETED)
+                m_recon201Done = true;
+        }
     }
 
     private void ParseAndUpdateHUD(ParamsReadContext ctx)
@@ -413,11 +601,13 @@ modded class MissionGameplay
 
         ref array<ref QT_HUDQuestEntry> entries = new array<ref QT_HUDQuestEntry>();
 
-        for (int q = 0; q < questCount; q++)
+        for (int qi = 0; qi < questCount; qi++)
         {
             ref QT_HUDQuestEntry entry = new QT_HUDQuestEntry();
             int stateInt, typeInt, objCount;
+            string questId;
 
+            ctx.Read(questId);
             ctx.Read(entry.title);
             ctx.Read(stateInt); entry.state = stateInt;
             ctx.Read(typeInt);
@@ -429,12 +619,17 @@ modded class MissionGameplay
                 ctx.Read(desc); ctx.Read(req); ctx.Read(prog);
                 string tick = "[ ] ";
                 if (prog >= req) tick = "[x] ";
-                string line = tick + desc;
-                if (typeInt == QT_QuestType.KILL)
-                    line = line + " (" + prog.ToString() + "/" + req.ToString() + ")";
+                string line = tick + QT_L10n.ResolveText(desc);
+                line = line + " (" + prog.ToString() + "/" + req.ToString() + ")";
                 entry.objectiveLines.Insert(line);
             }
             entries.Insert(entry);
+
+            // Detect recon quest completions so timers don't reactivate
+            if (questId == "quest_179" && stateInt == QT_QuestState.COMPLETED)
+                m_recon179Done = true;
+            if (questId == "quest_201" && stateInt == QT_QuestState.COMPLETED)
+                m_recon201Done = true;
         }
 
         if (m_questHUD) m_questHUD.SetEntries(entries);
@@ -484,6 +679,38 @@ modded class MissionGameplay
         m_questLog.SetData(history, lb);
     }
 
+    private void ParseAndShowJournal(ParamsReadContext ctx)
+    {
+        int count;
+        if (!ctx.Read(count)) return;
+
+        ref array<ref QT_JournalEntry> entries = new array<ref QT_JournalEntry>();
+        for (int i = 0; i < count; i++)
+        {
+            ref QT_JournalEntry e = new QT_JournalEntry();
+            ctx.Read(e.title);
+            ctx.Read(e.traderName);
+            ctx.Read(e.rewardMessage);
+            entries.Insert(e);
+        }
+
+        if (m_journal)
+            CloseJournal();
+
+        m_journal = new QT_Journal();
+        GetGame().GetUIManager().ShowScriptedMenu(m_journal, null);
+        m_journal.SetJournalData(entries);
+    }
+
+    void CloseJournal()
+    {
+        if (m_journal)
+        {
+            GetGame().GetUIManager().HideScriptedMenu(m_journal);
+            m_journal = null;
+        }
+    }
+
     private void ParseAndShowAdminPlayers(ParamsReadContext ctx)
     {
         int count;
@@ -515,7 +742,10 @@ modded class MissionGameplay
         if (!ctx.Read(traderId)) return;
         m_qt_nearbyTraderId = traderId;
         if (m_qt_hintWidget)
+        {
+            if (traderId != "") m_qt_hintWidget.SetText(QT_L10n.Key("HINT_INTERACT"));
             m_qt_hintWidget.Show(traderId != "" && !m_questMenu);
+        }
     }
 
     // Called by OnUpdate - check for F key when near a trader
@@ -527,11 +757,15 @@ modded class MissionGameplay
         m_qt_traderPositions = new array<vector>();
         for (int i = 0; i < count; i++)
         {
-            string tid; vector pos; float dist;
+            string tid; vector pos; float dist; string tName; string greeting;
             ctx.Read(tid); ctx.Read(pos); ctx.Read(dist);
+            ctx.Read(tName); ctx.Read(greeting);
             m_qt_traderIds.Insert(tid);
             m_qt_traderPositions.Insert(pos);
             m_qt_maxDist = dist;
+            // Pre-populate name and greeting maps so they're ready before menu opens
+            m_qt_traderNames.Set(tid, tName);
+            m_qt_traderGreetings.Set(tid, greeting);
         }
         Print("[QuestTrader] Client received " + count + " trader positions.");
     }

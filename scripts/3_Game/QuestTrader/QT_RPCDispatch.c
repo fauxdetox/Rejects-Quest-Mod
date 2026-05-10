@@ -33,7 +33,7 @@ modded class DayZGame
     {
         super.OnRPC(sender, target, rpc_type, ctx);
 
-        if (rpc_type < 9100 || rpc_type > 9116) return;
+        if (rpc_type < 9100 || rpc_type > 9119) return;
 
         if (QT_RPCDispatcherBase.s_instance)
             QT_RPCDispatcherBase.s_instance.Dispatch(sender, target, rpc_type, ctx);

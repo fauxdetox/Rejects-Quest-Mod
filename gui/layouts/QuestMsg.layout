@@ -30,7 +30,7 @@ PanelWidgetClass root {
 					hexactsize 0
 					vexactsize 0
 					text ""
-					font gui/fonts/condensed.fnt
+					font "gui/fonts/sdf_MetronBook24"
 				}
 			}
 		}

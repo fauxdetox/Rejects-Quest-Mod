@@ -18,7 +18,7 @@ PanelWidgetClass root {
 			vexactpos 0
 			hexactsize 0
 			vexactsize 0
-			text "[ Press F to see Quests ]"
+			text "#QuestTrader_HINT_INTERACT"
 			halign left_ref
 		}
 	}
