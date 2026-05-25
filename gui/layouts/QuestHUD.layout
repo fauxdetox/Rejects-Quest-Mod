@@ -12,8 +12,8 @@ PanelWidgetClass root {
    visible 1
    ignorepointer 1
    color 0 0 0 0.65
-   position 0.713 0.164
-   size 0.284 0.331
+   position 0.679 0.164
+   size 0.318 0.521
    hexactpos 0
    vexactpos 0
    hexactsize 0
@@ -31,40 +31,140 @@ PanelWidgetClass root {
      hexactsize 0
      vexactsize 0
      text "#QuestTrader_HUD_TITLE"
-     font "gui/fonts/sdf_MetronBook24"
+     font "gui/fonts/amorserifpro22"
      "exact text" 1
      "text halign" center
      "text valign" center
-    }
-    MultilineTextWidgetClass HUDContent {
-     visible 1
-     ignorepointer 1
-     color 0.85 0.95 0.85 1
-     position 0.035 0.1
-     size 0.93 0.78
-     hexactpos 0
-     vexactpos 0
-     hexactsize 0
-     vexactsize 0
-     text ""
-     "exact text" 1
-     text_proportion 0.5
-     wrap 1
-     "condense whitespace" 1
     }
     TextWidgetClass HUDToggleHint {
      visible 1
      ignorepointer 1
      color 0.5 0.5 0.5 1
-     position 0.5 0.89
+     position 0.53 0.918
      size 0.46 0.07
      hexactpos 0
      vexactpos 0
      hexactsize 0
      vexactsize 0
      text "#QuestTrader_HUD_TOGGLE"
+     font "gui/fonts/amorserifpro16"
      "text halign" right
      "text valign" center
+    }
+    PanelWidgetClass HUDContentLayout {
+     visible 1
+     ignorepointer 1
+     color 0.85 0.95 0.85 1
+     position 0.035 0.1
+     size 0.928 0.8
+     hexactpos 0
+     vexactpos 0
+     hexactsize 0
+     vexactsize 0
+     {
+      MultilineTextWidgetClass HUDContent1 {
+       visible 1
+       ignorepointer 1
+       color 0.85 0.95 0.85 1
+       position 0.001 0
+       size 0.998 0.25
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/amorserifpro16"
+       "exact text" 1
+       "exact text size" 12
+       wrap 1
+       "condense whitespace" 1
+      }
+      MultilineTextWidgetClass HUDContent2 {
+       visible 1
+       ignorepointer 1
+       color 0.85 0.95 0.85 1
+       position 0.001 0.247
+       size 1 0.25
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/amorserifpro16"
+       "exact text" 1
+       "exact text size" 12
+       wrap 1
+       "condense whitespace" 1
+      }
+      MultilineTextWidgetClass HUDContent3 {
+       visible 1
+       ignorepointer 1
+       color 0.85 0.95 0.85 1
+       position 0.002 0.499
+       size 1 0.25
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/amorserifpro16"
+       "exact text" 1
+       "exact text size" 12
+       wrap 1
+       "condense whitespace" 1
+      }
+      MultilineTextWidgetClass HUDContent4 {
+       visible 1
+       ignorepointer 1
+       color 0.85 0.95 0.85 1
+       position 0.002 0.75
+       size 1 0.25
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui/fonts/amorserifpro16"
+       "exact text" 1
+       "exact text size" 12
+       wrap 1
+       "condense whitespace" 1
+      }
+      MultilineTextWidgetClass HUDContent5 {
+       visible 0
+       ignorepointer 1
+       color 0.85 0.95 0.85 1
+       position 0 0.94
+       size 1 0.22
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui"
+       "exact text" 1
+       "exact text size" 12
+       wrap 1
+       "condense whitespace" 1
+      }
+      MultilineTextWidgetClass HUDContent6 {
+       visible 0
+       ignorepointer 1
+       color 0.85 0.95 0.85 1
+       position 0 1.16
+       size 1 0.22
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text ""
+       font "gui"
+       "exact text" 1
+       "exact text size" 12
+       wrap 1
+       "condense whitespace" 1
+      }
+     }
     }
    }
   }

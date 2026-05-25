@@ -31,6 +31,7 @@ class QT_ToastEntry
 class QT_Toast
 {
     private static ref QT_Toast s_instance;
+    private static const string READY_SOUND_SET = "QuestTrader_Ready_SoundSet";
 
     private ref array<ref QT_ToastEntry> m_queue;
     private ref array<ref QT_ToastEntry> m_active;
@@ -85,7 +86,45 @@ class QT_Toast
     // --------------------------------------------------------
     void Push(string message, int type = 0, float lifetime = 4.0)
     {
+        if (IsReadyNotification(message))
+            PlayReadySound();
+
         m_queue.Insert(new QT_ToastEntry(message, type, lifetime));
+    }
+
+    private bool IsReadyNotification(string message)
+    {
+        if (message.IndexOf("#QuestTrader_QUEST_READY_TURN_IN") == 0) return true;
+        if (message.IndexOf("$QuestTrader_QUEST_READY_TURN_IN") == 0) return true;
+        if (message.IndexOf("#QuestTrader_STATE_READY") == 0) return true;
+        if (message.IndexOf("$QuestTrader_STATE_READY") == 0) return true;
+
+        string translated = QT_L10n.ResolveText(message);
+        string readyText = QT_L10n.T("QUEST_READY_TURN_IN");
+        if (translated == readyText) return true;
+        if (translated.IndexOf(readyText) == 0) return true;
+
+        return false;
+    }
+
+    private void PlayReadySound()
+    {
+        PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
+        if (!player) return;
+
+        SoundParams soundParams = new SoundParams(READY_SOUND_SET);
+        if (!soundParams || !soundParams.IsValid())
+        {
+            Print("[QuestTrader] Ready toast sound failed: invalid SoundSet " + READY_SOUND_SET);
+            return;
+        }
+
+        EffectSound sound = SEffectManager.PlaySoundOnObject(READY_SOUND_SET, player, 0, 0, false);
+        if (sound)
+        {
+            sound.SetSoundWaveKind(WaveKind.WAVEEFFECTEX);
+            sound.SetAutodestroy(true);
+        }
     }
 
     // --------------------------------------------------------

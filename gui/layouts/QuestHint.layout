@@ -19,6 +19,7 @@ PanelWidgetClass root {
 			hexactsize 0
 			vexactsize 0
 			text "#QuestTrader_HINT_INTERACT"
+			font "gui"
 			halign left_ref
 		}
 	}

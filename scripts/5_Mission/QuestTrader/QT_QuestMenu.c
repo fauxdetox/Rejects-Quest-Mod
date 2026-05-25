@@ -56,6 +56,7 @@ class QT_QuestMenu : UIScriptedMenu
     private ButtonWidget        m_tabDone;
     private TextWidget          m_traderLabel;
     private TextWidget          m_npcNameLabel;
+    private TextWidget          m_journalHint;
     private float               m_tickTimer;       // accumulates delta time
     private static const float  TICK_INTERVAL = 1.0; // refresh every second
     private static const int    TAB_AVAILABLE = 0;
@@ -89,13 +90,23 @@ class QT_QuestMenu : UIScriptedMenu
         m_completeBtn  = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnComplete"));
         m_cancelBtn    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnCancel"));
         m_closeBtn     = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnClose"));
-        Print("[QuestTrader] Buttons - accept=" + (m_acceptBtn != null) + " turnIn=" + (m_completeBtn != null) + " cancel=" + (m_cancelBtn != null) + " close=" + (m_closeBtn != null));
+        string buttonDebug = "[QuestTrader] Buttons - accept=";
+        buttonDebug = buttonDebug + (m_acceptBtn != null).ToString();
+        buttonDebug = buttonDebug + " turnIn=";
+        buttonDebug = buttonDebug + (m_completeBtn != null).ToString();
+        buttonDebug = buttonDebug + " cancel=";
+        buttonDebug = buttonDebug + (m_cancelBtn != null).ToString();
+        buttonDebug = buttonDebug + " close=";
+        buttonDebug = buttonDebug + (m_closeBtn != null).ToString();
+        Print(buttonDebug);
         m_tabActive    = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabActive"));
         m_tabNow       = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabNow"));
         m_tabDone      = ButtonWidget.Cast(layoutRoot.FindAnyWidget("BtnTabDone"));
         m_npcNameLabel = TextWidget.Cast(layoutRoot.FindAnyWidget("NPCName"));
+        m_journalHint  = TextWidget.Cast(layoutRoot.FindAnyWidget("JournalHint"));
 
         ApplyLocalization();
+        RefreshInputHints();
         Print("[QuestTrader] QuestMenu ready.");
         return layoutRoot;
     }
@@ -112,6 +123,17 @@ class QT_QuestMenu : UIScriptedMenu
         QT_L10n.ApplyText(layoutRoot, "BtnAccept", "BUTTON_ACCEPT");
         QT_L10n.ApplyText(layoutRoot, "BtnComplete", "BUTTON_COMPLETE");
         QT_L10n.ApplyText(layoutRoot, "BtnCancel", "BUTTON_CANCEL");
+    }
+
+    private void RefreshInputHints()
+    {
+        if (!m_journalHint) return;
+
+        string journalHint = "[";
+        journalHint = journalHint + QT_Input.GetBoundKeyName(QT_INPUT_OPEN_JOURNAL);
+        journalHint = journalHint + "] ";
+        journalHint = journalHint + QT_L10n.T("MENU_OPEN_JOURNAL");
+        m_journalHint.SetText(journalHint);
     }
 
     override void OnShow()
@@ -139,6 +161,14 @@ class QT_QuestMenu : UIScriptedMenu
     override void Update(float timeslice)
     {
         super.Update(timeslice);
+        RefreshInputHints();
+
+        if (QT_Input.LocalPress(QT_INPUT_OPEN_JOURNAL))
+        {
+            if (!QT_Input.ShouldBlockQuestTraderShortcut())
+                OpenJournalSafely();
+            return;
+        }
 
         // Tick cooldowns down every second and refresh the selected quest display
         m_tickTimer += timeslice;
@@ -307,6 +337,17 @@ class QT_QuestMenu : UIScriptedMenu
         Close();
     }
 
+    private void OpenJournalSafely()
+    {
+        MissionGameplay mg = MissionGameplay.Cast(GetGame().GetMission());
+        if (mg)
+            mg.QT_CloseQuestMenu();
+        else
+            Close();
+
+        QT_RPCManager.RequestJournal();
+    }
+
     private void SelectQuest(int idx)
     {
         m_selectedIndex = idx;
@@ -387,7 +428,7 @@ class QT_QuestMenu : UIScriptedMenu
             cdStr = cdStr + cdSecsOnly.ToString() + "s";
 
             // Show cooldown with divider at bottom of description
-            string availableIn = QT_L10n.T("AVAILABLE_IN") + ": " + cdStr;
+            string availableIn = QT_L10n.T("REPEATABLE_AFTER") + ": " + cdStr;
             if (m_descText) m_descText.SetText(e.title + "\n\n" + e.description + "\n\n--------------------------------\n" + availableIn);
             if (detail == "")
                 detail = availableIn;
@@ -512,7 +553,6 @@ class QT_QuestMenu : UIScriptedMenu
         {
             QT_QuestEntryUI entry = m_shownQuests[m_selectedIndex];
             QT_RPCManager.RequestAcceptQuest(entry.questId);
-            QT_RPCManager.RequestInteractTrader(m_traderId);
             return true;
         }
 
@@ -520,7 +560,6 @@ class QT_QuestMenu : UIScriptedMenu
         {
             QT_QuestEntryUI turnEntry = m_shownQuests[m_selectedIndex];
             QT_RPCManager.RequestTurnIn(turnEntry.questId, m_traderId);
-            QT_RPCManager.RequestInteractTrader(m_traderId);
             return true;
         }
 
@@ -528,7 +567,6 @@ class QT_QuestMenu : UIScriptedMenu
         {
             QT_QuestEntryUI cancelEntry = m_shownQuests[m_selectedIndex];
             QT_RPCManager.RequestCancelQuest(cancelEntry.questId);
-            QT_RPCManager.RequestInteractTrader(m_traderId);
             return true;
         }
 

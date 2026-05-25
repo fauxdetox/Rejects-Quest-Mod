@@ -6,7 +6,7 @@
 
 class ActionInteractTrader : ActionBase
 {
-    void ActionInteractTrader() { m_Text = "Talk"; }
+    void ActionInteractTrader() { m_Text = "#QuestTrader_ACTION_TALK"; }
 
     override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
     {

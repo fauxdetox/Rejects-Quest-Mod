@@ -11,6 +11,8 @@ class QT_RPCDispatcher extends QT_RPCDispatcherBase
     override void Dispatch(PlayerIdentity sender, Object target, int rpc_type, ParamsReadContext ctx)
     {
         if (!GetGame().IsServer()) return;
+        if (!QT_RPCGuard.IsQuestTraderRPC(rpc_type)) return;
+        if (!ctx) return;
 
         // S->C: target is the player directly
         PlayerBase player = PlayerBase.Cast(target);

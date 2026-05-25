@@ -75,7 +75,12 @@ class QT_Logger
         if (playerUID != "")
             playerPart = " [" + playerName + "]";
 
-        string line = "[" + e.timestamp + "] [" + e.level + "] [" + category + "]" + playerPart + " " + message;
+        string line = "[" + e.timestamp + "]";
+        line = line + " [" + e.level + "]";
+        line = line + " [" + category + "]";
+        line = line + playerPart;
+        line = line + " ";
+        line = line + message;
 
         FileHandle fh = OpenFile(m_logFile, FileMode.APPEND);
         if (fh != 0)
@@ -97,7 +102,12 @@ class QT_Logger
             string pp = "";
             if (e.playerUID != "")
                 pp = " [" + e.playerName + "]";
-            string ln = "[" + e.timestamp + "] [" + e.level + "] [" + e.category + "]" + pp + " " + e.message;
+            string ln = "[" + e.timestamp + "]";
+            ln = ln + " [" + e.level + "]";
+            ln = ln + " [" + e.category + "]";
+            ln = ln + pp;
+            ln = ln + " ";
+            ln = ln + e.message;
             result.Insert(ln);
         }
         return result;

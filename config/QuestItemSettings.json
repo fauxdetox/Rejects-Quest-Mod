@@ -7,8 +7,8 @@
     "Rag",
     "WoodenPlank",
     "PurificationTablets",
-	"Worm",
-	"Netting"
+    "Worm",
+    "Netting"
   ],
   "StackableRewardItems": [
     "MoneyRuble1",
@@ -28,5 +28,23 @@
   "DeerKillAliases": [
     "CervusElaphus",
     "CapreolusCapreolus"
-  ]
+  ],
+  "KillTargetGroups": {
+    "Deer": [
+      "CervusElaphus",
+      "CapreolusCapreolus"
+    ],
+    "Infected": [
+      "ZombieBase",
+      "Zmb"
+    ],
+    "Animals": [
+      "AnimalBase"
+    ],
+    "AI": [
+      "ExpansionAI",
+      "eAIBase",
+      "SurvivorBase"
+    ]
+  }
 }

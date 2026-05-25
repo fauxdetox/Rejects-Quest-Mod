@@ -27,18 +27,62 @@ class QT_ClientRPCDispatcherBase
     }
 }
 
+class QT_RPCGuard
+{
+    static bool IsQuestTraderRPC(int rpc_type)
+    {
+        if (rpc_type == 9100) return true;
+        if (rpc_type == 9101) return true;
+        if (rpc_type == 9102) return true;
+        if (rpc_type == 9103) return true;
+        if (rpc_type == 9104) return true;
+        if (rpc_type == 9105) return true;
+        if (rpc_type == 9106) return true;
+        if (rpc_type == 9107) return true;
+        if (rpc_type == 9108) return true;
+        if (rpc_type == 9109) return true;
+        if (rpc_type == 9110) return true;
+        if (rpc_type == 9111) return true;
+        if (rpc_type == 9113) return true;
+        if (rpc_type == 9114) return true;
+        if (rpc_type == 9115) return true;
+        if (rpc_type == 9116) return true;
+        if (rpc_type == 9117) return true;
+        if (rpc_type == 9118) return true;
+        if (rpc_type == 9119) return true;
+        if (rpc_type == 9120) return true;
+        if (rpc_type == 9121) return true;
+        if (rpc_type == 9122) return true;
+        return false;
+    }
+}
+
 modded class DayZGame
 {
     override void OnRPC(PlayerIdentity sender, Object target, int rpc_type, ParamsReadContext ctx)
     {
-        super.OnRPC(sender, target, rpc_type, ctx);
+        if (!QT_RPCGuard.IsQuestTraderRPC(rpc_type))
+        {
+            super.OnRPC(sender, target, rpc_type, ctx);
+            return;
+        }
 
-        if (rpc_type < 9100 || rpc_type > 9119) return;
+        if (!ctx) return;
 
-        if (QT_RPCDispatcherBase.s_instance)
+        bool handled = false;
+        if (GetGame().IsServer() && !target && QT_RPCDispatcherBase.s_instance)
+        {
             QT_RPCDispatcherBase.s_instance.Dispatch(sender, target, rpc_type, ctx);
+            handled = true;
+        }
 
-        if (QT_ClientRPCDispatcherBase.s_instance)
+        if (!handled && GetGame().IsClient() && QT_ClientRPCDispatcherBase.s_instance)
+        {
             QT_ClientRPCDispatcherBase.s_instance.DispatchClient(rpc_type, ctx);
+            handled = true;
+        }
+
+        if (!handled && GetGame().IsServer() && QT_RPCDispatcherBase.s_instance)
+            QT_RPCDispatcherBase.s_instance.Dispatch(sender, target, rpc_type, ctx);
     }
 }

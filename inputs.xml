@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<modded_inputs>
+	<inputs>
+		<actions>
+			<input name="UAQuestTraderOpenQuestMenu" loc="#QuestTrader_INPUT_OPEN_QUEST_MENU">
+				<btn name="kF"/>
+			</input>
+			<input name="UAQuestTraderToggleHUD" loc="#QuestTrader_INPUT_TOGGLE_HUD">
+				<btn name="kY"/>
+			</input>
+			<input name="UAQuestTraderOpenAdmin" loc="#QuestTrader_INPUT_OPEN_ADMIN">
+				<btn name="kInsert"/>
+			</input>
+			<input name="UAQuestTraderOpenJournal" loc="#QuestTrader_INPUT_OPEN_JOURNAL">
+				<btn name="kApostrophe"/>
+			</input>
+		</actions>
+		<sorting name="QuestTrader" loc="QuestTrader">
+			<input name="UAQuestTraderOpenQuestMenu"/>
+			<input name="UAQuestTraderToggleHUD"/>
+			<input name="UAQuestTraderOpenAdmin"/>
+			<input name="UAQuestTraderOpenJournal"/>
+		</sorting>
+	</inputs>
+	<preset>
+		<input name="UAQuestTraderOpenQuestMenu">
+			<btn name="kF"/>
+		</input>
+		<input name="UAQuestTraderToggleHUD">
+			<btn name="kY"/>
+		</input>
+		<input name="UAQuestTraderOpenAdmin">
+			<btn name="kInsert"/>
+		</input>
+		<input name="UAQuestTraderOpenJournal">
+			<btn name="kApostrophe"/>
+		</input>
+	</preset>
+</modded_inputs>

@@ -14,42 +14,46 @@ modded class PlayerBase
     private string m_qt_lastInventoryQuestSignature = "";
     private string m_qt_lastReadyInventoryQuestSignature = "";
     private bool m_qt_inventorySignatureInitialised = false;
-    private static const float QT_INVENTORY_QUEST_INTERVAL = 2.0;
+    private static const float QT_INVENTORY_QUEST_INTERVAL = 5.0;
 
     override void OnConnect()
     {
         super.OnConnect();
         if (GetGame().IsServer() && GetIdentity())
         {
-            QT_QuestManager.GetInstance().OnPlayerConnected(GetIdentity().GetId());
+            QT_QuestManager.GetInstance().RegisterOnlinePlayer(this, GetIdentity());
             m_qt_hudScheduled = true;
-            // Both HUD update and trader positions are deferred to OnScheduledTick
-            // so the client RPC handler is ready before we send anything
+            GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(QT_SendInitialQuestSync, Math.RandomInt(8000, 15000), false);
+            // Delay the first non-critical sync so connect bursts do not stall the server.
         }
     }
 
     override void OnDisconnect()
     {
-        if (GetGame().IsServer() && GetIdentity())
-            QT_QuestManager.GetInstance().OnPlayerDisconnected(GetIdentity().GetId());
+        // MissionServer handles the actual disconnect event. Doing it here can
+        // race with respawn/relog character swaps and remove an active player
+        // from the admin online list.
+        m_qt_hudScheduled = false;
+        GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).Remove(QT_SendInitialQuestSync);
         super.OnDisconnect();
+    }
+
+    override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source,
+                           int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
+    {
+        QT_KillHelper.HandleHitBy(this, source);
+        super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
+    }
+
+    override void EEKilled(Object killer)
+    {
+        super.EEKilled(killer);
+        QT_KillHelper.HandleKilled(this, killer, true);
     }
 
     override void OnScheduledTick(float deltaTime)
     {
         super.OnScheduledTick(deltaTime);
-        if (m_qt_hudScheduled && GetGame().IsServer() && GetIdentity())
-        {
-            m_qt_hudScheduled = false;
-            QT_RPCManager.SendHUDUpdate(this);
-            QT_RPCManager.SendTraderPositions(this);
-            m_qt_lastInventoryQuestSignature = QT_QuestManager.GetInstance().BuildInventoryQuestSignature(this);
-            m_qt_lastReadyInventoryQuestSignature = QT_QuestManager.GetInstance().BuildReadyInventoryQuestSignature(this);
-            m_qt_inventorySignatureInitialised = true;
-            m_qt_inventoryQuestTimer = 0;
-            return;
-        }
-
         if (GetGame().IsServer() && GetIdentity())
         {
             m_qt_inventoryQuestTimer += deltaTime;
@@ -57,6 +61,12 @@ modded class PlayerBase
             {
                 m_qt_inventoryQuestTimer = 0;
                 QT_QuestManager mgr = QT_QuestManager.GetInstance();
+                if (!mgr.HasActiveInventoryQuest(GetIdentity().GetId()))
+                {
+                    m_qt_lastInventoryQuestSignature = "";
+                    m_qt_lastReadyInventoryQuestSignature = "";
+                    return;
+                }
                 string sig = mgr.BuildInventoryQuestSignature(this);
                 string readySig = mgr.BuildReadyInventoryQuestSignature(this);
                 if (!m_qt_inventorySignatureInitialised)
@@ -71,11 +81,26 @@ modded class PlayerBase
                     QT_RPCManager.SendHUDUpdate(this);
 
                     if (readySig != "" && readySig != m_qt_lastReadyInventoryQuestSignature)
+                    {
                         QT_RPCManager.SendToast(this, "#QuestTrader_QUEST_READY_TURN_IN", QT_ToastType.COMPLETE);
+                    }
                     m_qt_lastReadyInventoryQuestSignature = readySig;
                 }
             }
         }
+    }
+
+    private void QT_SendInitialQuestSync()
+    {
+        if (!m_qt_hudScheduled) return;
+        if (!GetGame().IsServer() || !GetIdentity()) return;
+
+        m_qt_hudScheduled = false;
+        QT_RPCManager.SendHUDUpdate(this);
+        m_qt_lastInventoryQuestSignature = QT_QuestManager.GetInstance().BuildInventoryQuestSignature(this);
+        m_qt_lastReadyInventoryQuestSignature = QT_QuestManager.GetInstance().BuildReadyInventoryQuestSignature(this);
+        m_qt_inventorySignatureInitialised = true;
+        m_qt_inventoryQuestTimer = 0;
     }
 
 }

@@ -19,7 +19,12 @@ modded class MissionServer
 {
     private ref QT_TraderSpawner m_traderSpawner;
     private float m_autosaveTimer = 0;
-    private static const float AUTOSAVE_INTERVAL = 60.0;
+    private float m_fullBackupTimer = 0;
+    private static const float SAVE_QUEUE_INTERVAL = 5.0;
+    private bool m_QTProcessingEvent = false;
+    private float m_QTLastEventTime = 0;
+    private EventType m_QTLastEventType;
+    private ref map<string, float> m_QTLastPlayerEventTime;
 
     override void OnInit()
     {
@@ -39,8 +44,15 @@ modded class MissionServer
         // Initialise marker singleton before spawning so markers are created on spawn
         QT_TraderMarker.GetInstance();
 
-        // Spawn NPCs here - world is fully loaded
+        // Delay NPC spawn by 15 seconds to allow custom map mods (DayZ Editor Loader etc.)
+        // to finish placing objects before traders appear
         m_traderSpawner = new QT_TraderSpawner();
+        GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(DelayedSpawnTraders, 15000, false);
+        Print("[QuestTrader] OnMissionStart - trader spawn scheduled in 15 seconds.");
+    }
+
+    private void DelayedSpawnTraders()
+    {
         m_traderSpawner.SpawnAll(QT_QuestManager.GetInstance().GetConfig());
         QT_Logger.GetInstance().Info("SYSTEM", "QuestTrader NPCs spawned.");
         Print("[QuestTrader] OnMissionStart - spawning traders.");
@@ -52,9 +64,16 @@ modded class MissionServer
         if (!GetGame().IsServer()) return;
 
         m_autosaveTimer += timeslice;
-        if (m_autosaveTimer >= AUTOSAVE_INTERVAL)
+        if (m_autosaveTimer >= SAVE_QUEUE_INTERVAL)
         {
             m_autosaveTimer = 0;
+            QT_QuestManager.GetInstance().ProcessSaveQueue();
+        }
+
+        m_fullBackupTimer += timeslice;
+        if (m_fullBackupTimer >= QT_Perf.FullBackupIntervalSeconds())
+        {
+            m_fullBackupTimer = 0;
             QT_QuestManager.GetInstance().SaveAll();
         }
 
@@ -67,10 +86,7 @@ modded class MissionServer
         super.InvokeOnConnect(player, identity);
         if (!GetGame().IsServer() || !player || !identity) return;
 
-        // Push trader positions directly from mission level as a reliable fallback.
-        // OnScheduledTick in QT_PlayerBase can be interrupted by !!! OnError() on connect.
-        Print("[QuestTrader] InvokeOnConnect - pushing trader positions to: " + identity.GetName());
-        QT_RPCManager.SendTraderPositions(player);
+        QT_QuestManager.GetInstance().RegisterOnlinePlayer(player, identity);
     }
 
     override void OnMissionFinish()
@@ -86,119 +102,251 @@ modded class MissionServer
 
     override void OnEvent(EventType eventTypeId, Param params)
     {
+        if (m_QTProcessingEvent && eventTypeId == m_QTLastEventType)
+        {
+            QT_Perf.Log("OnEvent reentry ignored eventType=" + QT_GetEventTypeName(eventTypeId));
+            return;
+        }
+
+        int qtEventStart = GetGame().GetTime();
+        m_QTProcessingEvent = true;
+        m_QTLastEventType = eventTypeId;
+        m_QTLastEventTime = qtEventStart / 1000.0;
+
         super.OnEvent(eventTypeId, params);
 
-        // Intercept chat messages for /q command
-        if (eventTypeId == ChatMessageEventTypeID)
+        if (!GetGame().IsServer())
         {
-            ChatMessageEventParams chatParams;
-            if (!Class.CastTo(chatParams, params)) return;
-            if (!chatParams) return;
+            m_QTProcessingEvent = false;
+            return;
+        }
 
-            // ChatMessageEventParams: param1=channel, param2=senderName, param3=text, param4=to
-            string msg = chatParams.param3;
-            // Match "/q" or "q" as the last word in the message.
-            // GlobalChatPlus prepends a channel prefix, so we check the final word only.
-            // GlobalChatPlus prepends channel prefix so check last word only
-            string msgTrimmed = msg.Trim();
-            string lastWord = msgTrimmed;
-            for (int ci = msgTrimmed.Length() - 1; ci >= 0; ci--)
+        QT_Perf.Log("OnEvent received eventType=" + QT_GetEventTypeName(eventTypeId));
+
+        bool qtUsedEvent = false;
+
+        if (eventTypeId == ClientReadyEventTypeID)
+        {
+            qtUsedEvent = true;
+            ClientReadyEventParams readyParams;
+            if (Class.CastTo(readyParams, params) && readyParams)
+                QT_HandleClientReadyEvent(eventTypeId, readyParams.param1, PlayerBase.Cast(readyParams.param2));
+        }
+        else if (eventTypeId == ClientNewReadyEventTypeID)
+        {
+            qtUsedEvent = true;
+            ClientNewReadyEventParams newReadyParams;
+            if (Class.CastTo(newReadyParams, params) && newReadyParams)
+                QT_HandleClientReadyEvent(eventTypeId, newReadyParams.param1, PlayerBase.Cast(newReadyParams.param2));
+        }
+        else if (eventTypeId == ClientRespawnEventTypeID)
+        {
+            qtUsedEvent = true;
+            ClientRespawnEventParams respawnParams;
+            if (Class.CastTo(respawnParams, params) && respawnParams)
+                QT_HandleClientReadyEvent(eventTypeId, respawnParams.param1, PlayerBase.Cast(respawnParams.param2));
+        }
+        else if (eventTypeId == ClientReconnectEventTypeID)
+        {
+            qtUsedEvent = true;
+            ClientReconnectEventParams reconnectParams;
+            if (Class.CastTo(reconnectParams, params) && reconnectParams)
+                QT_HandleClientReadyEvent(eventTypeId, reconnectParams.param1, PlayerBase.Cast(reconnectParams.param2));
+        }
+        else if (eventTypeId == ClientDisconnectedEventTypeID)
+        {
+            qtUsedEvent = true;
+            ClientDisconnectedEventParams disconnectParams;
+            if (Class.CastTo(disconnectParams, params) && disconnectParams && disconnectParams.param1)
             {
-                if (msgTrimmed.Get(ci) == " ")
-                {
-                    lastWord = msgTrimmed.Substring(ci + 1, msgTrimmed.Length() - ci - 1);
-                    break;
-                }
+                QT_RPCManager.CancelPendingForPlayer(disconnectParams.param1.GetId());
+                QT_QuestManager.GetInstance().OnPlayerDisconnected(disconnectParams.param1.GetId());
             }
-            if (lastWord != "/q" && lastWord != "q") return;
+        }
+        else if (eventTypeId == ChatMessageEventTypeID)
+        {
+            qtUsedEvent = true;
+            QT_HandleQuestChatCommand(params);
+        }
 
-            string senderName = chatParams.param2;
-            array<Man> players = new array<Man>();
-            GetGame().GetPlayers(players);
-            foreach (Man man : players)
+        if (!qtUsedEvent)
+        {
+            m_QTProcessingEvent = false;
+            return;
+        }
+
+        int qtElapsed = GetGame().GetTime() - qtEventStart;
+        QT_Perf.Log("OnEvent processed eventType=" + QT_GetEventTypeName(eventTypeId) + " elapsedMs=" + qtElapsed.ToString());
+        m_QTProcessingEvent = false;
+    }
+
+    private void QT_HandleClientReadyEvent(EventType eventTypeId, PlayerIdentity identity, PlayerBase player)
+    {
+        if (!identity && player)
+            identity = player.GetIdentity();
+        if (!identity) return;
+
+        string playerKey = identity.GetPlainId();
+        if (playerKey == "") playerKey = identity.GetId();
+        if (playerKey == "") return;
+
+        if (QT_IsPlayerEventDebounced(playerKey, eventTypeId))
+            return;
+
+        QT_QuestManager.GetInstance().RegisterOnlinePlayer(player, identity);
+        QT_Perf.Log("player ready processed eventType=" + QT_GetEventTypeName(eventTypeId) + " player=" + identity.GetName() + " key=" + playerKey);
+    }
+
+    private bool QT_IsPlayerEventDebounced(string playerKey, EventType eventTypeId)
+    {
+        if (!m_QTLastPlayerEventTime)
+            m_QTLastPlayerEventTime = new map<string, float>();
+
+        float now = GetGame().GetTime() / 1000.0;
+        float debounceSeconds = QT_Perf.EventDebounceSeconds();
+        string debounceKey = playerKey;
+
+        if (m_QTLastPlayerEventTime.Contains(debounceKey))
+        {
+            float lastTime = m_QTLastPlayerEventTime.Get(debounceKey);
+            if (now - lastTime < debounceSeconds)
             {
-                PlayerBase player = PlayerBase.Cast(man);
-                if (!player || !player.GetIdentity()) continue;
-                if (player.GetIdentity().GetName() != senderName) continue;
+                QT_Perf.Log("player event ignored by debounce eventType=" + QT_GetEventTypeName(eventTypeId) + " playerKey=" + playerKey);
+                return true;
+            }
+        }
 
-                string uid = player.GetIdentity().GetId();
-                QT_QuestManager mgr = QT_QuestManager.GetInstance();
-                auto playerMap = mgr.GetOrCreatePlayerMap(uid);
+        m_QTLastPlayerEventTime.Set(debounceKey, now);
+        return false;
+    }
 
-                bool any = false;
-                foreach (string questId, ref QT_PlayerQuestState qs : playerMap)
-                {
-                    if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED) continue;
-                    QT_QuestDef def = mgr.GetQuestDef(questId);
-                    if (!def) continue;
+    private string QT_GetEventTypeName(EventType eventTypeId)
+    {
+        if (eventTypeId == ClientReadyEventTypeID) return "ClientReadyEventTypeID";
+        if (eventTypeId == ClientNewReadyEventTypeID) return "ClientNewReadyEventTypeID";
+        if (eventTypeId == ClientRespawnEventTypeID) return "ClientRespawnEventTypeID";
+        if (eventTypeId == ClientReconnectEventTypeID) return "ClientReconnectEventTypeID";
+        if (eventTypeId == ClientDisconnectedEventTypeID) return "ClientDisconnectedEventTypeID";
+        if (eventTypeId == ChatMessageEventTypeID) return "ChatMessageEventTypeID";
+        return "UnusedEventType";
+    }
 
-                    string stateStr = "Active";
-                    if (qs.state == QT_QuestState.COMPLETED) stateStr = "READY TO TURN IN";
+    private void QT_HandleQuestChatCommand(Param params)
+    {
+        ChatMessageEventParams chatParams;
+        if (!Class.CastTo(chatParams, params)) return;
+        if (!chatParams) return;
 
-                    QT_RPCManager.SendChatLine(player, "[Quest] " + def.title + " - " + stateStr);
-
-                    // Look up the trader name for turn-in info
-                    QT_Config cfg = mgr.GetConfig();
-                    if (def.type == QT_QuestType.DELIVER)
-                    {
-                        // Deliver quests: show destination trader
-                        string destName = def.deliveryTraderId;
-                        if (cfg)
-                        {
-                            foreach (QT_TraderDef td : cfg.TraderNPCPositions)
-                            {
-                                if (td.id == def.deliveryTraderId)
-                                {
-                                    destName = td.name;
-                                    break;
-                                }
-                            }
-                        }
-                        QT_RPCManager.SendChatLine(player, "  Deliver to: " + destName);
-                    }
-                    else
-                    {
-                        // Collect/Kill quests: show objectives then turn-in trader
-                        for (int o = 0; o < def.objectives.Count(); o++)
-                        {
-                            QT_Objective obj = def.objectives[o];
-                            int prog = 0;
-                            if (def.type == QT_QuestType.COLLECT)
-                            {
-                                // Count items live from inventory - same as quest menu
-                                prog = mgr.CountItemsInInventory(player, obj.itemClassName);
-                                if (prog > obj.requiredAmount) prog = obj.requiredAmount;
-                            }
-                            else if (o < qs.objectiveProgress.Count())
-                            {
-                                prog = qs.objectiveProgress[o];
-                            }
-                            string tick = "[ ] ";
-                            if (prog >= obj.requiredAmount) tick = "[x] ";
-                            string objLine = "  " + tick + QT_RPCManager.BuildObjectiveDisplayText(def, obj) + " (" + prog + "/" + obj.requiredAmount + ")";
-                            QT_RPCManager.SendChatLine(player, objLine);
-                        }
-                        // Show which trader to return to
-                        string turnInName = def.traderId;
-                        if (cfg)
-                        {
-                            foreach (QT_TraderDef td2 : cfg.TraderNPCPositions)
-                            {
-                                if (td2.id == def.traderId)
-                                {
-                                    turnInName = td2.name;
-                                    break;
-                                }
-                            }
-                        }
-                        QT_RPCManager.SendChatLine(player, "  Turn in to: " + turnInName);
-                    }
-                    any = true;
-                }
-                if (!any)
-                    QT_RPCManager.SendChatLine(player, "[Quest] No active quests. Find a Quest Trader!");
+        // ChatMessageEventParams: param1=channel, param2=senderName, param3=text, param4=to
+        string msg = chatParams.param3;
+        string msgTrimmed = msg.Trim();
+        string lastWord = msgTrimmed;
+        for (int ci = msgTrimmed.Length() - 1; ci >= 0; ci--)
+        {
+            if (msgTrimmed.Get(ci) == " ")
+            {
+                lastWord = msgTrimmed.Substring(ci + 1, msgTrimmed.Length() - ci - 1);
                 break;
             }
+        }
+        if (lastWord != "/q" && lastWord != "q") return;
+
+        string senderName = chatParams.param2;
+        array<Man> players = new array<Man>();
+        GetGame().GetPlayers(players);
+        foreach (Man man : players)
+        {
+            PlayerBase player = PlayerBase.Cast(man);
+            if (!player || !player.GetIdentity()) continue;
+            if (player.GetIdentity().GetName() != senderName) continue;
+
+            string uid = player.GetIdentity().GetId();
+            QT_QuestManager mgr = QT_QuestManager.GetInstance();
+            auto playerMap = mgr.GetOrCreatePlayerMap(uid);
+
+            bool any = false;
+            int questsEvaluated = 0;
+            foreach (string questId, ref QT_PlayerQuestState qs : playerMap)
+            {
+                questsEvaluated++;
+                if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED) continue;
+                QT_QuestDef def = mgr.GetQuestDef(questId);
+                if (!def) continue;
+
+                string stateStr = "#QuestTrader_STATE_ACTIVE";
+                if (qs.state == QT_QuestState.COMPLETED) stateStr = "#QuestTrader_STATE_READY";
+
+                QT_RPCManager.SendChatLine(player, "#QuestTrader_CHAT_PREFIX " + def.title + " - " + stateStr);
+
+                // Look up the trader name for turn-in info
+                QT_Config cfg = mgr.GetConfig();
+                if (def.type == QT_QuestType.DELIVER)
+                {
+                    // Deliver quests: show destination trader
+                    string destName = def.deliveryTraderId;
+                    if (cfg)
+                    {
+                        foreach (QT_TraderDef td : cfg.TraderNPCPositions)
+                        {
+                            if (td.id == def.deliveryTraderId)
+                            {
+                                destName = td.name;
+                                break;
+                            }
+                        }
+                    }
+                    QT_RPCManager.SendChatLine(player, "#QuestTrader_CHAT_DELIVER_TO: " + destName);
+                }
+                else
+                {
+                    // Collect/Kill quests: show objectives then turn-in trader
+                    for (int o = 0; o < def.objectives.Count(); o++)
+                    {
+                        QT_Objective obj = def.objectives[o];
+                        int prog = 0;
+                        if (def.type == QT_QuestType.COLLECT)
+                        {
+                            // Count items live from inventory - same as quest menu
+                            prog = mgr.CountItemsInInventory(player, obj.itemClassName);
+                            if (prog > obj.requiredAmount) prog = obj.requiredAmount;
+                        }
+                        else if (o < qs.objectiveProgress.Count())
+                        {
+                            prog = qs.objectiveProgress[o];
+                        }
+                        string tick = "[ ] ";
+                        if (prog >= obj.requiredAmount) tick = "[x] ";
+                        string objLine = "  ";
+                        objLine = objLine + tick;
+                        objLine = objLine + QT_RPCManager.BuildObjectiveDisplayText(def, obj);
+                        objLine = objLine + " (";
+                        objLine = objLine + prog.ToString();
+                        objLine = objLine + "/";
+                        objLine = objLine + obj.requiredAmount.ToString();
+                        objLine = objLine + ")";
+                        QT_RPCManager.SendChatLine(player, objLine);
+                    }
+                    // Show which trader to return to
+                    string turnInName = def.traderId;
+                    if (cfg)
+                    {
+                        foreach (QT_TraderDef td2 : cfg.TraderNPCPositions)
+                        {
+                            if (td2.id == def.traderId)
+                            {
+                                turnInName = td2.name;
+                                break;
+                            }
+                        }
+                    }
+                    QT_RPCManager.SendChatLine(player, "#QuestTrader_CHAT_TURN_IN_TO: " + turnInName);
+                }
+                any = true;
+            }
+            if (!any)
+                QT_RPCManager.SendChatLine(player, "#QuestTrader_CHAT_PREFIX #QuestTrader_CHAT_NO_ACTIVE");
+            QT_Perf.Log("chat /q processed player=" + senderName + " questsEvaluated=" + questsEvaluated.ToString());
+            break;
         }
     }
 }
@@ -208,6 +356,16 @@ modded class MissionServer
 // ============================================================
 modded class MissionGameplay
 {
+    private static const string QT_COMPLETE_SOUND_SET = "QuestTrader_Complete_SoundSet";
+    private static const string QT_READY_SOUND_SET = "QuestTrader_Ready_SoundSet";
+    private static const int QT_MAX_PLAYERS_PER_PACKET = 256;
+    private static const int QT_MAX_QUESTS_PER_PACKET = 100;
+    private static const int QT_MAX_OBJECTIVES_PER_QUEST = 32;
+    private static const int QT_MAX_REWARDS_PER_QUEST = 64;
+    private static const int QT_MAX_TRADER_POSITIONS = 256;
+    private static const int QT_MAX_LOG_LINES = 256;
+    private static const int QT_MAX_TEXT_CHARS = 4096;
+
     // Trader positions received from server on connect
     private ref array<string>  m_qt_traderIds;
     private ref array<vector>  m_qt_traderPositions;
@@ -217,17 +375,26 @@ modded class MissionGameplay
     private ref QT_QuestLog   m_questLog;
     private ref QT_Journal    m_journal;
     private ref QT_AdminPanel m_adminPanel;
-    private bool              m_qt_journalToggleDown = false;
+    private int               m_qt_adminPanelBlockUntil = 0;
+    private bool              m_qt_questMenuOpenRequested = false;
+    private bool              m_qt_adminPanelOpenRequested = false;
     private bool m_qt_initDone = false;
     private Widget            m_toastRoot;
-    private bool              m_qt_hudToggleDown = false;
-    private bool              m_qt_adminToggleDown = false;
     private string            m_qt_nearbyTraderId = "";
     private bool              m_qt_hintShown = false;
     private TextWidget        m_qt_hintWidget = null;
     private ref map<string, string> m_qt_traderNames    = new map<string, string>();
     private ref map<string, string> m_qt_traderGreetings = new map<string, string>();
     private ref map<string, float>  m_qt_greetingCooldowns = new map<string, float>();
+    private float                   m_qt_inputHintTimer = 0;
+    private ref array<string>       m_qt_interactQuestIds = new array<string>();
+    private ref array<string>       m_qt_interactClassNames = new array<string>();
+    private ref array<vector>       m_qt_interactPositions = new array<vector>();
+    private ref array<float>        m_qt_interactDistances = new array<float>();
+    private float                   m_qt_interactScanTimer = 0;
+    private string                  m_qt_nearbyInteractionQuestId = "";
+    private string                  m_qt_nearbyInteractionClassName = "";
+    private vector                  m_qt_nearbyInteractionPosition = vector.Zero;
 
     // Recon timer — supports multiple recon quests
     private static const float  RECON_DURATION     = 60.0;
@@ -249,6 +416,7 @@ modded class MissionGameplay
 
         m_questHUD = new QT_QuestHUD();
         m_questHUD.Init();
+        GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(QT_RequestInitialTraderPositions, Math.RandomInt(8000, 15000), false);
     }
 
     override void OnEvent(EventType eventTypeId, Param params)
@@ -285,14 +453,17 @@ modded class MissionGameplay
         // Always create the hint widget - positions will arrive via TRADER_POSITIONS RPC
         Widget hintRoot = GetGame().GetWorkspace().CreateWidgets("QuestTrader/gui/layouts/QuestHint.layout");
         if (hintRoot) m_qt_hintWidget = TextWidget.Cast(hintRoot.FindAnyWidget("QTHint"));
-        if (m_qt_hintWidget) m_qt_hintWidget.SetText(QT_L10n.Key("HINT_INTERACT"));
+        if (m_qt_hintWidget) m_qt_hintWidget.SetText(QT_GetInteractHint());
         if (m_qt_hintWidget) m_qt_hintWidget.Show(false);
 
         Print("[QuestTrader] Client: hint widget ready, awaiting trader positions from server.");
     }
 
-    private float m_qt_requestTimer = 0;
-    private bool  m_qt_positionsRequested = false;
+    private void QT_RequestInitialTraderPositions()
+    {
+        if (!GetGame().IsClient()) return;
+        QT_RPCManager.RequestTraderPositions();
+    }
 
     override void OnUpdate(float timeslice)
     {
@@ -300,56 +471,57 @@ modded class MissionGameplay
         QT_Toast.GetInstance().Update(timeslice);
         if (!GetGame().IsClient()) return;
 
-        bool hudTogglePressed = (KeyState(KeyCode.KC_O) == 1);
-        if (hudTogglePressed && !m_qt_hudToggleDown && m_questHUD && !m_questMenu)
-            m_questHUD.ToggleVisible();
-        m_qt_hudToggleDown = hudTogglePressed;
+        bool blockQuestTraderShortcut = QT_Input.ShouldBlockQuestTraderShortcut();
 
-        // Journal key disabled for now - will be re-enabled in a future update
-        // bool journalPressed = (KeyState(KeyCode.KC_APOSTROPHE) == 1);
-        // if (journalPressed && !m_qt_journalToggleDown && !m_questMenu && !m_adminPanel)
-        // {
-        //     if (m_journal)
-        //         CloseJournal();
-        //     else
-        //         QT_RPCManager.RequestJournal();
-        // }
-        // m_qt_journalToggleDown = journalPressed;
-
-        if (m_journal && KeyState(KeyCode.KC_ESCAPE) == 1)
-            CloseJournal();
-
-        bool adminTogglePressed = (KeyState(KeyCode.KC_INSERT) == 1);
-        if (adminTogglePressed && !m_qt_adminToggleDown && !m_questMenu)
+        m_qt_inputHintTimer += timeslice;
+        if (m_qt_inputHintTimer >= 1.0)
         {
-            if (m_adminPanel)
-                QT_CloseAdminPanel();
-            else
-                QT_RPCManager.RequestAdminData();
+            m_qt_inputHintTimer = 0;
+            if (m_qt_hintWidget && m_qt_nearbyTraderId != "" && !m_questMenu && !m_journal && !blockQuestTraderShortcut)
+                m_qt_hintWidget.SetText(QT_GetInteractHint());
         }
-        m_qt_adminToggleDown = adminTogglePressed;
 
-        // After 3 seconds, request trader positions from server (ensures RPC dispatcher is ready)
-        if (!m_qt_positionsRequested)
+        if (QT_Input.LocalPress(QT_INPUT_TOGGLE_HUD) && !blockQuestTraderShortcut && m_questHUD && !m_questMenu && !m_adminPanel && !m_questLog && !m_journal)
+            m_questHUD.ToggleVisible();
+
+        if (QT_Input.LocalPress(QT_INPUT_OPEN_ADMIN))
         {
-            m_qt_requestTimer += timeslice;
-            if (m_qt_requestTimer >= 3.0)
+            int adminNow = GetGame().GetTime();
+            if (m_adminPanel && !blockQuestTraderShortcut)
+                QT_CloseAdminPanel();
+            else if (adminNow >= m_qt_adminPanelBlockUntil && !blockQuestTraderShortcut && !m_questMenu && !m_questLog && !m_journal)
             {
-                m_qt_positionsRequested = true;
-                QT_RPCManager.RequestTraderPositions();
+                m_qt_adminPanelOpenRequested = true;
+                QT_RPCManager.RequestAdminData();
             }
         }
 
-        if (!m_qt_traderIds || m_qt_traderIds.Count() == 0) return;
+        if (QT_Input.LocalPress(QT_INPUT_OPEN_JOURNAL))
+        {
+            if (m_journal && !blockQuestTraderShortcut)
+                QT_CloseJournal();
+            else if (!blockQuestTraderShortcut && !m_questMenu && !m_adminPanel && !m_questLog)
+                QT_RPCManager.RequestJournal();
+        }
+
+        if (m_journal && KeyState(KeyCode.KC_ESCAPE) == 1)
+            QT_CloseJournal();
+
         PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
         if (!player) return;
         string closestId = "";
-        for (int ti = 0; ti < m_qt_traderIds.Count(); ti++)
+        float closestDist = float.MAX;
+        if (m_qt_traderIds && m_qt_traderIds.Count() > 0)
         {
-            if (vector.Distance(player.GetPosition(), m_qt_traderPositions[ti]) <= m_qt_maxDist)
+            vector pPos = player.GetPosition();
+            for (int ti = 0; ti < m_qt_traderIds.Count(); ti++)
             {
-                closestId = m_qt_traderIds[ti];
-                break;
+                float d = vector.Distance(pPos, m_qt_traderPositions[ti]);
+                if (d <= m_qt_maxDist && d < closestDist)
+                {
+                    closestDist = d;
+                    closestId = m_qt_traderIds[ti];
+                }
             }
         }
         // Show hint when proximity changes
@@ -357,8 +529,8 @@ modded class MissionGameplay
         {
             if (m_qt_hintWidget)
             {
-                if (closestId != "") m_qt_hintWidget.SetText(QT_L10n.Key("HINT_INTERACT"));
-                m_qt_hintWidget.Show(closestId != "" && !m_questMenu);
+                if (closestId != "") m_qt_hintWidget.SetText(QT_GetInteractHint());
+                m_qt_hintWidget.Show(closestId != "" && !m_questMenu && !m_journal && !blockQuestTraderShortcut);
             }
 
             // Fire greeting in chat when entering a trader's range
@@ -375,23 +547,32 @@ modded class MissionGameplay
                     string tName = m_qt_traderNames.Get(closestId);
                     if (greet != "")
                     {
-                        ChatMessageEventParams chatEvent = new ChatMessageEventParams(CCDirect, tName, greet, "");
-                        GetGame().GetMission().OnEvent(ChatMessageEventTypeID, chatEvent);
+                        GetGame().Chat(tName + ": " + QT_L10n.ResolveText(greet), "colorAction");
                         m_qt_greetingCooldowns.Set(closestId, now);
                     }
                 }
             }
         }
         // Keep hint hidden while menu is open
-        if (m_qt_hintWidget && m_questMenu) m_qt_hintWidget.Show(false);
+        if (m_qt_hintWidget && (m_questMenu || m_journal || blockQuestTraderShortcut)) m_qt_hintWidget.Show(false);
 
         m_qt_nearbyTraderId = closestId;
+
+        UpdateNearbyInteraction(player, timeslice, blockQuestTraderShortcut);
 
         // Fire interact on F press when near trader and menu not open
         if (m_qt_nearbyTraderId != "" && !m_questMenu)
         {
-            if (GetGame().GetInput().LocalPress("UAAction", false))
+            if (QT_Input.LocalPress(QT_INPUT_OPEN_QUEST_MENU) && !blockQuestTraderShortcut)
+            {
+                m_qt_questMenuOpenRequested = true;
                 QT_RPCManager.RequestInteractTrader(m_qt_nearbyTraderId);
+            }
+        }
+        else if (m_qt_nearbyInteractionQuestId != "" && !m_questMenu)
+        {
+            if (QT_Input.LocalPress(QT_INPUT_OPEN_QUEST_MENU) && !blockQuestTraderShortcut)
+                QT_RPCManager.RequestObjectInteract(m_qt_nearbyInteractionQuestId, m_qt_nearbyInteractionClassName, m_qt_nearbyInteractionPosition);
         }
 
         // ── Recon timers ───────────────────────────────────────────
@@ -442,7 +623,7 @@ modded class MissionGameplay
                 if (m_qt_hintWidget)
                 {
                     m_qt_hintWidget.SetText(QT_L10n.T("RECON_SCANNING") + "... " + remaining + QT_L10n.T("RECON_REMAINING"));
-                    m_qt_hintWidget.Show(true);
+                    m_qt_hintWidget.Show(!blockQuestTraderShortcut);
                 }
 
                 if (m_reconTimer >= RECON_DURATION)
@@ -467,11 +648,16 @@ modded class MissionGameplay
                 if (m_reconActive)
                 {
                     int rem = Math.Max(0, RECON_DURATION - m_reconTimer);
-                    hint = QT_L10n.T("RECON_PAUSED") + ": " + rem + QT_L10n.T("RECON_REMAINING") + ". " + QT_L10n.T("RECON_CONTINUE");
+                    hint = QT_L10n.T("RECON_PAUSED");
+                    hint = hint + ": ";
+                    hint = hint + rem.ToString();
+                    hint = hint + QT_L10n.T("RECON_REMAINING");
+                    hint = hint + ". ";
+                    hint = hint + QT_L10n.T("RECON_CONTINUE");
                 }
 
                 m_qt_hintWidget.SetText(hint);
-                m_qt_hintWidget.Show(true);
+                m_qt_hintWidget.Show(!blockQuestTraderShortcut);
             }
         }
         else if (m_qt_hintWidget && m_qt_nearbyTraderId == "")
@@ -488,30 +674,106 @@ modded class MissionGameplay
             GetGame().GetUIManager().HideScriptedMenu(m_questMenu);
             m_questMenu = null;
         }
-        if (m_qt_hintWidget && m_qt_nearbyTraderId != "") m_qt_hintWidget.Show(true);
+        m_qt_questMenuOpenRequested = false;
+        if (m_qt_hintWidget && m_qt_nearbyTraderId != "" && !QT_Input.ShouldBlockQuestTraderShortcut()) m_qt_hintWidget.Show(true);
     }
 
     void QT_CloseAdminPanel()
     {
+        m_qt_adminPanelBlockUntil = GetGame().GetTime() + 1200;
         if (m_adminPanel)
         {
             GetGame().GetUIManager().HideScriptedMenu(m_adminPanel);
             m_adminPanel = null;
         }
+        m_qt_adminPanelOpenRequested = false;
+    }
+
+    void QT_CloseQuestLog()
+    {
+        if (m_questLog)
+        {
+            GetGame().GetUIManager().HideScriptedMenu(m_questLog);
+            m_questLog = null;
+        }
+    }
+
+    void QT_CloseJournal()
+    {
+        if (m_journal)
+        {
+            GetGame().GetUIManager().HideScriptedMenu(m_journal);
+            m_journal = null;
+        }
+        if (m_qt_hintWidget && m_qt_nearbyTraderId != "" && !QT_Input.ShouldBlockQuestTraderShortcut()) m_qt_hintWidget.Show(true);
     }
 
     // Called by QT_DayZGameHook when the client receives an RPC
     void QT_HandleClientRPC(int rpc_type, ParamsReadContext ctx)
     {
+        if (!ctx) return;
+        if (!QT_RPCGuard.IsQuestTraderRPC(rpc_type)) return;
+
         if (rpc_type == QT_RPC.TRADER_POSITIONS) { ParseTraderPositions(ctx); return; }
-        if (rpc_type == QT_RPC.PROXIMITY_UPDATE) { ParseProximityUpdate(ctx); return; }
         if (rpc_type == QT_RPC.SEND_QUEST_LIST)    ParseAndShowQuestMenu(ctx);
         else if (rpc_type == QT_RPC.HUD_UPDATE)    ParseAndUpdateHUD(ctx);
         else if (rpc_type == QT_RPC.TOAST)         ParseAndShowToast(ctx);
+        else if (rpc_type == QT_RPC.COMPLETE_SOUND) PlayQuestCompleteSound(ctx);
+        else if (rpc_type == QT_RPC.READY_SOUND) PlayQuestReadySound(ctx);
         else if (rpc_type == QT_RPC.QUEST_LOG)     ParseAndShowQuestLog(ctx);
         else if (rpc_type == QT_RPC.REQUEST_JOURNAL) ParseAndShowJournal(ctx);
         else if (rpc_type == QT_RPC.ADMIN_PLAYER_DATA) ParseAndShowAdminPlayers(ctx);
         else if (rpc_type == QT_RPC.ADMIN_LOG_DATA)    ParseAndShowAdminLog(ctx);
+        else if (rpc_type == QT_RPC.ADMIN_HISTORY_PAGE) ParseAndShowAdminHistoryPage(ctx);
+    }
+
+    private void PlayQuestCompleteSound(ParamsReadContext ctx)
+    {
+        int unused;
+        if (!ctx.Read(unused)) return;
+
+        PlayQuestSound(QT_COMPLETE_SOUND_SET, "Complete");
+    }
+
+    private void PlayQuestReadySound(ParamsReadContext ctx)
+    {
+        int unused;
+        if (!ctx.Read(unused)) return;
+
+        PlayQuestSound(QT_READY_SOUND_SET, "Ready");
+    }
+
+    private bool QT_IsSafeCount(int count, int maxCount)
+    {
+        return count >= 0 && count <= maxCount;
+    }
+
+    private bool QT_IsSafeText(string text, int maxChars)
+    {
+        return text.Length() <= maxChars;
+    }
+
+    private void PlayQuestSound(string soundSet, string label)
+    {
+        PlayerBase player = PlayerBase.Cast(GetGame().GetPlayer());
+        if (!player) return;
+
+        SoundParams soundParams = new SoundParams(soundSet);
+        if (!soundParams || !soundParams.IsValid())
+        {
+            Print("[QuestTrader] " + label + " sound failed: invalid SoundSet " + soundSet);
+            return;
+        }
+
+        EffectSound sound = SEffectManager.PlaySoundOnObject(soundSet, player, 0, 0, false);
+        if (sound)
+        {
+            sound.SetSoundWaveKind(WaveKind.WAVEEFFECTEX);
+            sound.SetAutodestroy(true);
+            return;
+        }
+
+        Print("[QuestTrader] " + label + " sound failed: PlaySoundOnObject returned null.");
     }
 
     private void ParseAndShowQuestMenu(ParamsReadContext ctx)
@@ -522,6 +784,10 @@ modded class MissionGameplay
         if (!ctx.Read(greeting))    return;
         if (!ctx.Read(traderName))  return;
         if (!ctx.Read(questCount))  return;
+        if (!QT_IsSafeText(traderId, 128)) return;
+        if (!QT_IsSafeText(greeting, QT_MAX_TEXT_CHARS)) return;
+        if (!QT_IsSafeText(traderName, 256)) return;
+        if (!QT_IsSafeCount(questCount, QT_MAX_QUESTS_PER_PACKET)) return;
 
         ref array<ref QT_QuestEntryUI> quests = new array<ref QT_QuestEntryUI>();
 
@@ -530,40 +796,58 @@ modded class MissionGameplay
             ref QT_QuestEntryUI entry = new QT_QuestEntryUI();
             int typeInt, stateInt, objCount, rewCount, cdRemaining;
 
-            ctx.Read(entry.questId);
-            ctx.Read(entry.traderId);
-            ctx.Read(entry.title);
-            ctx.Read(entry.description);
-            ctx.Read(typeInt);    entry.type  = typeInt;
-            ctx.Read(stateInt);   entry.state = stateInt;
-            ctx.Read(entry.acceptMessage);
-            ctx.Read(entry.rewardMessage);
-            ctx.Read(cdRemaining); entry.cooldownRemaining = cdRemaining;
+            if (!ctx.Read(entry.questId)) return;
+            if (!ctx.Read(entry.traderId)) return;
+            if (!ctx.Read(entry.title)) return;
+            if (!ctx.Read(entry.description)) return;
+            if (!ctx.Read(typeInt)) return;
+            entry.type  = typeInt;
+            if (!ctx.Read(stateInt)) return;
+            entry.state = stateInt;
+            if (!ctx.Read(entry.acceptMessage)) return;
+            if (!ctx.Read(entry.rewardMessage)) return;
+            if (!ctx.Read(cdRemaining)) return;
+            entry.cooldownRemaining = cdRemaining;
+            if (!QT_IsSafeText(entry.questId, 128)) return;
+            if (!QT_IsSafeText(entry.traderId, 128)) return;
+            if (!QT_IsSafeText(entry.title, 256)) return;
+            if (!QT_IsSafeText(entry.description, QT_MAX_TEXT_CHARS)) return;
+            if (!QT_IsSafeText(entry.acceptMessage, QT_MAX_TEXT_CHARS)) return;
+            if (!QT_IsSafeText(entry.rewardMessage, QT_MAX_TEXT_CHARS)) return;
 
-            ctx.Read(objCount);
+            if (!ctx.Read(objCount)) return;
+            if (!QT_IsSafeCount(objCount, QT_MAX_OBJECTIVES_PER_QUEST)) return;
             for (int o = 0; o < objCount; o++)
             {
                 string desc; int req, prog;
-                ctx.Read(desc); ctx.Read(req); ctx.Read(prog);
+                if (!ctx.Read(desc)) return;
+                if (!ctx.Read(req)) return;
+                if (!ctx.Read(prog)) return;
+                if (!QT_IsSafeText(desc, QT_MAX_TEXT_CHARS)) return;
                 entry.objectiveDescs.Insert(QT_L10n.ResolveText(desc));
                 entry.objectiveRequired.Insert(req);
                 entry.objectiveProgress.Insert(prog);
             }
 
-            ctx.Read(rewCount);
+            if (!ctx.Read(rewCount)) return;
+            if (!QT_IsSafeCount(rewCount, QT_MAX_REWARDS_PER_QUEST)) return;
             for (int r = 0; r < rewCount; r++)
             {
                 string rewClass; int rewAmt;
-                ctx.Read(rewClass); ctx.Read(rewAmt);
+                if (!ctx.Read(rewClass)) return;
+                if (!ctx.Read(rewAmt)) return;
+                if (!QT_IsSafeText(rewClass, 256)) return;
                 entry.rewardDescs.Insert(rewAmt.ToString() + "x " + QT_L10n.ResolveText(rewClass));
             }
 
             int prereqCount;
-            ctx.Read(prereqCount);
+            if (!ctx.Read(prereqCount)) return;
+            if (!QT_IsSafeCount(prereqCount, QT_MAX_OBJECTIVES_PER_QUEST)) return;
             for (int pr = 0; pr < prereqCount; pr++)
             {
                 string preTitle;
-                ctx.Read(preTitle);
+                if (!ctx.Read(preTitle)) return;
+                if (!QT_IsSafeText(preTitle, 256)) return;
                 entry.prereqTitles.Insert(preTitle);
             }
 
@@ -575,11 +859,15 @@ modded class MissionGameplay
         m_qt_traderNames.Set(traderId, traderName);
         m_qt_traderGreetings.Set(traderId, greeting);
 
+        if (!m_questMenu && !m_qt_questMenuOpenRequested)
+            return;
+
         if (!m_questMenu)
         {
             m_questMenu = new QT_QuestMenu();
             GetGame().GetUIManager().ShowScriptedMenu(m_questMenu, null);
         }
+        m_qt_questMenuOpenRequested = false;
         m_questMenu.SetQuestData(traderId, traderName, quests);
         if (m_qt_hintWidget) m_qt_hintWidget.Show(false);
 
@@ -598,8 +886,13 @@ modded class MissionGameplay
     {
         int questCount;
         if (!ctx.Read(questCount)) return;
+        if (!QT_IsSafeCount(questCount, QT_MAX_QUESTS_PER_PACKET)) return;
 
         ref array<ref QT_HUDQuestEntry> entries = new array<ref QT_HUDQuestEntry>();
+        m_qt_interactQuestIds.Clear();
+        m_qt_interactClassNames.Clear();
+        m_qt_interactPositions.Clear();
+        m_qt_interactDistances.Clear();
 
         for (int qi = 0; qi < questCount; qi++)
         {
@@ -607,21 +900,49 @@ modded class MissionGameplay
             int stateInt, typeInt, objCount;
             string questId;
 
-            ctx.Read(questId);
-            ctx.Read(entry.title);
-            ctx.Read(stateInt); entry.state = stateInt;
-            ctx.Read(typeInt);
-            ctx.Read(objCount);
+            if (!ctx.Read(questId)) return;
+            if (!ctx.Read(entry.title)) return;
+            if (!ctx.Read(stateInt)) return;
+            entry.state = stateInt;
+            if (!ctx.Read(typeInt)) return;
+            if (!ctx.Read(objCount)) return;
+            if (!QT_IsSafeText(questId, 128)) return;
+            if (!QT_IsSafeText(entry.title, 256)) return;
+            if (!QT_IsSafeCount(objCount, QT_MAX_OBJECTIVES_PER_QUEST)) return;
 
             for (int o = 0; o < objCount; o++)
             {
                 string desc; int req, prog;
-                ctx.Read(desc); ctx.Read(req); ctx.Read(prog);
+                if (!ctx.Read(desc)) return;
+                if (!ctx.Read(req)) return;
+                if (!ctx.Read(prog)) return;
+                if (!QT_IsSafeText(desc, QT_MAX_TEXT_CHARS)) return;
                 string tick = "[ ] ";
                 if (prog >= req) tick = "[x] ";
                 string line = tick + QT_L10n.ResolveText(desc);
-                line = line + " (" + prog.ToString() + "/" + req.ToString() + ")";
+                line = line + " (";
+                line = line + prog.ToString();
+                line = line + "/";
+                line = line + req.ToString();
+                line = line + ")";
                 entry.objectiveLines.Insert(line);
+            }
+
+            int hasInteractionTarget;
+            string interactionClassName;
+            vector interactionPosition;
+            float interactionDistance;
+            if (!ctx.Read(hasInteractionTarget)) return;
+            if (!ctx.Read(interactionClassName)) return;
+            if (!ctx.Read(interactionPosition)) return;
+            if (!ctx.Read(interactionDistance)) return;
+            if (!QT_IsSafeText(interactionClassName, 128)) return;
+            if (hasInteractionTarget == 1)
+            {
+                m_qt_interactQuestIds.Insert(questId);
+                m_qt_interactClassNames.Insert(interactionClassName);
+                m_qt_interactPositions.Insert(interactionPosition);
+                m_qt_interactDistances.Insert(interactionDistance);
             }
             entries.Insert(entry);
 
@@ -641,6 +962,7 @@ modded class MissionGameplay
         int toastType;
         if (!ctx.Read(message))   return;
         if (!ctx.Read(toastType)) return;
+        if (!QT_IsSafeText(message, QT_MAX_TEXT_CHARS)) return;
         QT_Toast.GetInstance().Push(message, toastType);
     }
 
@@ -648,24 +970,37 @@ modded class MissionGameplay
     {
         int histCount;
         if (!ctx.Read(histCount)) return;
+        if (!QT_IsSafeCount(histCount, QT_MAX_QUESTS_PER_PACKET)) return;
 
         ref array<ref QT_QuestLogEntry> history = new array<ref QT_QuestLogEntry>();
         for (int h = 0; h < histCount; h++)
         {
             ref QT_QuestLogEntry e = new QT_QuestLogEntry();
-            ctx.Read(e.questTitle);
-            ctx.Read(e.completedAt);
-            ctx.Read(e.rewardSummary);
-            ctx.Read(e.runNumber);
+            if (!ctx.Read(e.questId)) return;
+            if (!ctx.Read(e.questTitle)) return;
+            if (!ctx.Read(e.completedAt)) return;
+            if (!ctx.Read(e.rewardSummary)) return;
+            if (!ctx.Read(e.runNumber)) return;
+            if (!ctx.Read(e.questDescription)) return;
+            if (!ctx.Read(e.objectiveSummary)) return;
+            if (!QT_IsSafeText(e.questId, 128)) return;
+            if (!QT_IsSafeText(e.questTitle, 256)) return;
+            if (!QT_IsSafeText(e.completedAt, 128)) return;
+            if (!QT_IsSafeText(e.rewardSummary, QT_MAX_TEXT_CHARS)) return;
+            if (!QT_IsSafeText(e.questDescription, QT_MAX_TEXT_CHARS)) return;
+            if (!QT_IsSafeText(e.objectiveSummary, QT_MAX_TEXT_CHARS)) return;
             history.Insert(e);
         }
 
         int lbCount;
-        ctx.Read(lbCount);
+        if (!ctx.Read(lbCount)) return;
+        if (!QT_IsSafeCount(lbCount, QT_MAX_LOG_LINES)) return;
         ref array<string> lb = new array<string>();
         for (int l = 0; l < lbCount; l++)
         {
-            string line; ctx.Read(line);
+            string line;
+            if (!ctx.Read(line)) return;
+            if (!QT_IsSafeText(line, QT_MAX_TEXT_CHARS)) return;
             lb.Insert(line);
         }
 
@@ -683,69 +1018,154 @@ modded class MissionGameplay
     {
         int count;
         if (!ctx.Read(count)) return;
+        if (!QT_IsSafeCount(count, QT_MAX_QUESTS_PER_PACKET)) return;
 
         ref array<ref QT_JournalEntry> entries = new array<ref QT_JournalEntry>();
         for (int i = 0; i < count; i++)
         {
             ref QT_JournalEntry e = new QT_JournalEntry();
-            ctx.Read(e.title);
-            ctx.Read(e.traderName);
-            ctx.Read(e.rewardMessage);
+            if (!ctx.Read(e.title)) return;
+            if (!ctx.Read(e.traderName)) return;
+            if (!ctx.Read(e.rewardMessage)) return;
+            if (!QT_IsSafeText(e.title, 256)) return;
+            if (!QT_IsSafeText(e.traderName, 256)) return;
+            if (!QT_IsSafeText(e.rewardMessage, QT_MAX_TEXT_CHARS)) return;
+            e.description = e.rewardMessage;
             entries.Insert(e);
         }
 
         if (m_journal)
-            CloseJournal();
+            QT_CloseJournal();
 
         m_journal = new QT_Journal();
         GetGame().GetUIManager().ShowScriptedMenu(m_journal, null);
         m_journal.SetJournalData(entries);
     }
 
-    void CloseJournal()
-    {
-        if (m_journal)
-        {
-            GetGame().GetUIManager().HideScriptedMenu(m_journal);
-            m_journal = null;
-        }
-    }
-
     private void ParseAndShowAdminPlayers(ParamsReadContext ctx)
     {
         int count;
         if (!ctx.Read(count)) return;
+        if (!QT_IsSafeCount(count, QT_MAX_PLAYERS_PER_PACKET)) return;
 
         ref array<ref QT_AdminPlayerEntry> players = new array<ref QT_AdminPlayerEntry>();
         for (int i = 0; i < count; i++)
         {
             ref QT_AdminPlayerEntry p = new QT_AdminPlayerEntry();
-            ctx.Read(p.uid);
-            ctx.Read(p.name);
-            ctx.Read(p.activeQuests);
-            ctx.Read(p.totalCompleted);
+            if (!ctx.Read(p.uid)) return;
+            if (!ctx.Read(p.name)) return;
+            if (!ctx.Read(p.steamId)) return;
+            if (!ctx.Read(p.activeQuests)) return;
+            if (!ctx.Read(p.totalCompleted)) return;
+            if (!ctx.Read(p.detailText)) return;
+            if (!QT_IsSafeText(p.uid, 128)) return;
+            if (!QT_IsSafeText(p.name, 256)) return;
+            if (!QT_IsSafeText(p.steamId, 128)) return;
+            if (!QT_IsSafeText(p.detailText, QT_MAX_TEXT_CHARS)) return;
+            if (p.name == "" && p.uid == "") continue;
+            if (p.activeQuests < 0 || p.activeQuests > 9999) p.activeQuests = 0;
+            if (p.totalCompleted < 0 || p.totalCompleted > 999999) p.totalCompleted = 0;
             players.Insert(p);
         }
+
+        if (!m_adminPanel && (!m_qt_adminPanelOpenRequested || GetGame().GetTime() < m_qt_adminPanelBlockUntil))
+            return;
 
         if (!m_adminPanel)
         {
             m_adminPanel = new QT_AdminPanel();
             GetGame().GetUIManager().ShowScriptedMenu(m_adminPanel, null);
         }
+        m_qt_adminPanelOpenRequested = false;
         m_adminPanel.SetPlayerData(players);
     }
 
 
-    private void ParseProximityUpdate(ParamsReadContext ctx)
+    private string QT_GetInteractHint()
     {
-        string traderId;
-        if (!ctx.Read(traderId)) return;
-        m_qt_nearbyTraderId = traderId;
-        if (m_qt_hintWidget)
+        return "[ " + QT_Input.GetBoundKeyName(QT_INPUT_OPEN_QUEST_MENU) + " ] " + QT_L10n.T("HINT_INTERACT_ACTION");
+    }
+
+    private string QT_GetObjectInteractHint()
+    {
+        return "[ " + QT_Input.GetBoundKeyName(QT_INPUT_OPEN_QUEST_MENU) + " ] " + QT_L10n.T("HINT_INTERACT_OBJECT");
+    }
+
+    private void UpdateNearbyInteraction(PlayerBase player, float timeslice, bool blockQuestTraderShortcut)
+    {
+        m_qt_interactScanTimer += timeslice;
+        if (m_qt_interactScanTimer < 0.25) return;
+        m_qt_interactScanTimer = 0;
+
+        string questId = "";
+        string className = "";
+        vector objectPos = vector.Zero;
+        array<Object> foundObjects = new array<Object>();
+        array<CargoBase> proxyCargos = new array<CargoBase>();
+
+        for (int ii = 0; ii < m_qt_interactQuestIds.Count(); ii++)
         {
-            if (traderId != "") m_qt_hintWidget.SetText(QT_L10n.Key("HINT_INTERACT"));
-            m_qt_hintWidget.Show(traderId != "" && !m_questMenu);
+            string neededClass = m_qt_interactClassNames[ii];
+            vector neededPos = m_qt_interactPositions[ii];
+            float neededDist = m_qt_interactDistances[ii];
+            if (neededDist <= 0) neededDist = 3.0;
+
+            bool positionOk = false;
+            if (neededPos != vector.Zero)
+            {
+                positionOk = vector.Distance(player.GetPosition(), neededPos) <= neededDist;
+                if (positionOk) objectPos = neededPos;
+            }
+
+            bool classOk = true;
+            if (neededClass != "")
+            {
+                classOk = false;
+                foundObjects.Clear();
+                proxyCargos.Clear();
+                GetGame().GetObjectsAtPosition(player.GetPosition(), neededDist, foundObjects, proxyCargos);
+
+                foreach (Object foundObj : foundObjects)
+                {
+                    if (!foundObj) continue;
+
+                    string foundType = foundObj.GetType();
+                    if (foundType == "") continue;
+                    if (!foundType.Contains(neededClass) && !GetGame().IsKindOf(foundType, neededClass)) continue;
+
+                    vector foundPos = foundObj.GetPosition();
+                    if (neededPos != vector.Zero && vector.Distance(foundPos, neededPos) > neededDist) continue;
+
+                    classOk = true;
+                    className = foundType;
+                    objectPos = foundPos;
+                    break;
+                }
+            }
+
+            if ((neededPos == vector.Zero || positionOk) && classOk)
+            {
+                questId = m_qt_interactQuestIds[ii];
+                if (className == "") className = neededClass;
+                break;
+            }
         }
+
+        if (questId != m_qt_nearbyInteractionQuestId)
+        {
+            if (m_qt_hintWidget && m_qt_nearbyTraderId == "" && !m_questMenu && !m_journal && !blockQuestTraderShortcut)
+            {
+                if (questId != "") m_qt_hintWidget.SetText(QT_GetObjectInteractHint());
+                m_qt_hintWidget.Show(questId != "");
+            }
+        }
+
+        if (m_qt_hintWidget && m_qt_nearbyTraderId == "" && questId != "" && !m_questMenu && !m_journal && !blockQuestTraderShortcut)
+            m_qt_hintWidget.SetText(QT_GetObjectInteractHint());
+
+        m_qt_nearbyInteractionQuestId = questId;
+        m_qt_nearbyInteractionClassName = className;
+        m_qt_nearbyInteractionPosition = objectPos;
     }
 
     // Called by OnUpdate - check for F key when near a trader
@@ -753,16 +1173,27 @@ modded class MissionGameplay
     {
         int count;
         if (!ctx.Read(count)) return;
+        if (!QT_IsSafeCount(count, QT_MAX_TRADER_POSITIONS)) return;
         m_qt_traderIds       = new array<string>();
         m_qt_traderPositions = new array<vector>();
         for (int i = 0; i < count; i++)
         {
             string tid; vector pos; float dist; string tName; string greeting;
-            ctx.Read(tid); ctx.Read(pos); ctx.Read(dist);
-            ctx.Read(tName); ctx.Read(greeting);
+            if (!ctx.Read(tid)) return;
+            if (!ctx.Read(pos)) return;
+            if (!ctx.Read(dist)) return;
+            if (!ctx.Read(tName)) return;
+            if (!ctx.Read(greeting)) return;
+            if (!QT_IsSafeText(tid, 128)) return;
+            if (!QT_IsSafeText(tName, 256)) return;
+            if (!QT_IsSafeText(greeting, QT_MAX_TEXT_CHARS)) return;
             m_qt_traderIds.Insert(tid);
             m_qt_traderPositions.Insert(pos);
-            m_qt_maxDist = dist;
+            // Only set maxDist from first trader and clamp to sane range (1-15m)
+            if (i == 0)
+            {
+                m_qt_maxDist = Math.Clamp(dist, 1.0, 15.0);
+            }
             // Pre-populate name and greeting maps so they're ready before menu opens
             m_qt_traderNames.Set(tid, tName);
             m_qt_traderGreetings.Set(tid, greeting);
@@ -774,14 +1205,46 @@ modded class MissionGameplay
     {
         int count;
         if (!ctx.Read(count)) return;
+        if (!QT_IsSafeCount(count, QT_MAX_LOG_LINES)) return;
 
         ref array<string> lines = new array<string>();
         for (int i = 0; i < count; i++)
         {
-            string line; ctx.Read(line);
+            string line;
+            if (!ctx.Read(line)) return;
+            if (!QT_IsSafeText(line, QT_MAX_TEXT_CHARS)) return;
             lines.Insert(line);
         }
 
         if (m_adminPanel) m_adminPanel.SetLogLines(lines);
     }
+
+    private void ParseAndShowAdminHistoryPage(ParamsReadContext ctx)
+    {
+        string uid;
+        int page;
+        int totalPages;
+        int totalEntries;
+        int lineCount;
+        if (!ctx.Read(uid)) return;
+        if (!ctx.Read(page)) return;
+        if (!ctx.Read(totalPages)) return;
+        if (!ctx.Read(totalEntries)) return;
+        if (!ctx.Read(lineCount)) return;
+        if (!QT_IsSafeText(uid, 128)) return;
+        if (page < 0 || totalPages < 0 || totalEntries < 0) return;
+        if (!QT_IsSafeCount(lineCount, QT_MAX_LOG_LINES)) return;
+
+        ref array<string> lines = new array<string>();
+        for (int i = 0; i < lineCount; i++)
+        {
+            string line;
+            if (!ctx.Read(line)) return;
+            if (!QT_IsSafeText(line, QT_MAX_TEXT_CHARS)) return;
+            lines.Insert(line);
+        }
+
+        if (m_adminPanel) m_adminPanel.SetHistoryPage(uid, page, totalPages, totalEntries, lines);
+    }
+
 }

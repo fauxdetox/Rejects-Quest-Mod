@@ -12,8 +12,8 @@ PanelWidgetClass root {
    visible 1
    ignorepointer 0
    color 0.08 0.08 0.08 0.94
-   position 0.10 0.05
-   size 0.80 0.90
+   position 0.1 0.05
+   size 0.8 0.9
    hexactpos 0
    vexactpos 0
    hexactsize 0
@@ -25,13 +25,13 @@ PanelWidgetClass root {
      ignorepointer 1
      color 1 0.85 0.3 1
      position 0.02 0.015
-     size 0.70 0.05
+     size 0.7 0.05
      hexactpos 0
      vexactpos 0
      hexactsize 0
      vexactsize 0
      text "#QuestTrader_ADMIN_TITLE"
-     font "gui/fonts/sdf_MetronBook24"
+     font "gui/fonts/amorserifpro28"
      "exact text" 1
      "text valign" center
     }
@@ -62,6 +62,7 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_PLAYERS"
      text_proportion 0.34
+     font "gui/fonts/amorserifpro22"
     }
     ButtonWidgetClass TabBtnLogs {
      visible 1
@@ -76,6 +77,7 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_LOGS"
      text_proportion 0.34
+     font "gui/fonts/amorserifpro22"
     }
     PanelWidgetClass TabPlayers {
      visible 1
@@ -87,59 +89,194 @@ PanelWidgetClass root {
      hexactsize 0
      vexactsize 0
      {
-      TextListboxWidgetClass PlayerList {
-       visible 1
-       ignorepointer 0
-       color 0.12 0.12 0.12 1
-       position 0 0
-       size 0.45 0.86
-       hexactpos 0
-       vexactpos 0
-       hexactsize 0
-       vexactsize 0
-       "title visible" 0
-       colums ""
-       font "gui"
-      }
-      MultilineTextWidgetClass PlayerDetail {
+      PanelWidgetClass PlayerListFrame {
        visible 1
        ignorepointer 1
-       color 0.88 0.88 0.88 1
-       position 0.47 0
-       size 0.53 0.32
+       color 0.12 0.12 0.12 1
+       position 0 0
+       size 0.44 0.86
        hexactpos 0
        vexactpos 0
        hexactsize 0
        vexactsize 0
-       text ""
-       font "gui/fonts/sdf_MetronBook24"
-       wrap 1
+       style rover_sim_colorable
+       {
+        TextListboxWidgetClass PlayerList {
+         visible 1
+         ignorepointer 0
+         color 0.12 0.12 0.12 0
+         position 0.01 0.01
+         size 0.98 0.98
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         "title visible" 0
+         colums ""
+         lines 18
+         font "gui/fonts/amorserifpro16"
+        }
+       }
+      }
+      TextWidgetClass PlayerSummaryTitle {
+       visible 1
+       ignorepointer 1
+       color 0.86 0.86 0.86 1
+       position 0.465 0
+       size 0.26 0.035
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "#QuestTrader_ADMIN_SUMMARY"
+       font "gui/fonts/amorserifpro16"
+       "text valign" center
+      }
+      PanelWidgetClass PlayerSummaryFrame {
+       visible 1
+       ignorepointer 1
+       color 0.08 0.08 0.08 0.55
+       position 0.46 0.04
+       size 0.54 0.30
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style rover_sim_colorable
+       {
+        MultilineTextWidgetClass PlayerDetail {
+         visible 1
+         ignorepointer 1
+         color 0.88 0.88 0.88 1
+         position 0.015 0.025
+         size 0.97 0.95
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         text ""
+         font "gui/fonts/amorserifpro16"
+         "exact text" 1
+         "exact text size" 12
+         wrap 1
+        }
+       }
+      }
+      TextWidgetClass HistoryPageLabel {
+       visible 1
+       ignorepointer 1
+       color 0.86 0.86 0.86 1
+       position 0.465 0.36
+       size 0.36 0.04
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       text "Historico"
+       font "gui/fonts/amorserifpro16"
+       "text valign" center
+      }
+      ButtonWidgetClass BtnHistoryPrev {
+       visible 1
+       ignorepointer 0
+       color 0.15 0.15 0.15 1
+       position 0.905 0.355
+       size 0.04 0.045
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style DayZDefaultButton
+       text "<"
+       text_proportion 0.4
+       font "gui/fonts/amorserifpro22"
+      }
+      ButtonWidgetClass BtnHistoryNext {
+       visible 1
+       ignorepointer 0
+       color 0.15 0.15 0.15 1
+       position 0.955 0.355
+       size 0.04 0.045
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style DayZDefaultButton
+       text ">"
+       text_proportion 0.4
+       font "gui/fonts/amorserifpro22"
+      }
+      PanelWidgetClass PlayerHistoryFrame {
+       visible 1
+       ignorepointer 1
+       color 0.12 0.12 0.12 1
+       position 0.46 0.405
+       size 0.54 0.315
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style rover_sim_colorable
+       {
+        TextListboxWidgetClass PlayerHistoryList {
+         visible 1
+         ignorepointer 0
+         color 0.12 0.12 0.12 0
+         position 0.01 0.02
+         size 0.98 0.96
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         "title visible" 0
+         colums ""
+         lines 8
+         font "gui/fonts/amorserifpro16"
+        }
+       }
+      }
+      ButtonWidgetClass CopySteamID64 {
+       visible 1
+       ignorepointer 0
+       color 0.15 0.15 0.15 1
+       position 0.46 0.74
+       size 0.19 0.055
+       hexactpos 0
+       vexactpos 0
+       hexactsize 0
+       vexactsize 0
+       style DayZDefaultButton
+       text "#QuestTrader_ADMIN_COPY_STEAMID"
+       text_proportion 0.32
+       font "gui/fonts/amorserifpro22"
       }
       TextWidgetClass QuestIdLabel {
        visible 1
        ignorepointer 1
        color 0.75 0.75 0.75 1
-       position 0.47 0.37
-       size 0.18 0.05
+       position 0.001 0.875
+       size 0.306 0.05
        hexactpos 0
        vexactpos 0
        hexactsize 0
        vexactsize 0
        text "#QuestTrader_ADMIN_QUEST_ID"
+       font "gui/fonts/amorserifpro16"
        "text valign" center
       }
       EditBoxWidgetClass QuestIdInput {
        visible 1
        ignorepointer 0
        color 0.05 0.05 0.05 1
-       position 0.65 0.37
-       size 0.35 0.05
+       position 0.308 0.875
+       size 0.553 0.05
        hexactpos 0
        vexactpos 0
        hexactsize 0
        vexactsize 0
+       style Editor
        text ""
-       font "gui/fonts/sdf_MetronBook24"
+       font "gui"
       }
      }
     }
@@ -153,19 +290,34 @@ PanelWidgetClass root {
      hexactsize 0
      vexactsize 0
      {
-      MultilineTextWidgetClass LogText {
+      PanelWidgetClass LogListFrame {
        visible 1
        ignorepointer 1
-       color 0.82 0.92 0.82 1
+       color 0.12 0.12 0.12 1
        position 0 0
        size 1 1
        hexactpos 0
        vexactpos 0
        hexactsize 0
        vexactsize 0
-       text ""
-       font "gui/fonts/sdf_MetronBook24"
-       wrap 1
+       style rover_sim_colorable
+       {
+        TextListboxWidgetClass LogList {
+         visible 1
+         ignorepointer 0
+         color 0.12 0.12 0.12 0
+         position 0.01 0.015
+         size 0.98 0.97
+         hexactpos 0
+         vexactpos 0
+         hexactsize 0
+         vexactsize 0
+         "title visible" 0
+         colums ""
+         lines 22
+         font "gui/fonts/amorserifpro16"
+        }
+       }
       }
      }
     }
@@ -173,7 +325,7 @@ PanelWidgetClass root {
      visible 1
      ignorepointer 0
      color 0.15 0.15 0.15 1
-     position 0.02 0.80
+     position 0.02 0.8
      size 0.18 0.05
      hexactpos 0
      vexactpos 0
@@ -181,13 +333,14 @@ PanelWidgetClass root {
      vexactsize 0
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_RELOAD"
-     text_proportion 0.30
+     text_proportion 0.3
+     font "gui/fonts/amorserifpro22"
     }
     ButtonWidgetClass BtnRespawnNPCs {
      visible 1
      ignorepointer 0
      color 0.15 0.15 0.15 1
-     position 0.21 0.80
+     position 0.21 0.8
      size 0.18 0.05
      hexactpos 0
      vexactpos 0
@@ -196,12 +349,13 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_RESPAWN_NPCS"
      text_proportion 0.26
+     font "gui/fonts/amorserifpro22"
     }
     ButtonWidgetClass BtnRefreshLog {
      visible 1
      ignorepointer 0
      color 0.15 0.15 0.15 1
-     position 0.40 0.80
+     position 0.4 0.8
      size 0.18 0.05
      hexactpos 0
      vexactpos 0
@@ -210,11 +364,12 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_REFRESH_LOG"
      text_proportion 0.26
+     font "gui/fonts/amorserifpro22"
     }
     ButtonWidgetClass BtnCompleteQuest {
      visible 1
      ignorepointer 0
-     color 0.10 0.30 0.10 1
+     color 0.1 0.3 0.1 1
      position 0.02 0.86
      size 0.29 0.05
      hexactpos 0
@@ -224,6 +379,7 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_COMPLETE_QUEST"
      text_proportion 0.26
+     font "gui/fonts/amorserifpro22"
     }
     ButtonWidgetClass BtnResetQuest {
      visible 1
@@ -238,6 +394,7 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_RESET_QUEST"
      text_proportion 0.26
+     font "gui/fonts/amorserifpro22"
     }
     ButtonWidgetClass BtnWipePlayer {
      visible 1
@@ -252,6 +409,7 @@ PanelWidgetClass root {
      style DayZDefaultButton
      text "#QuestTrader_ADMIN_WIPE_PLAYER"
      text_proportion 0.26
+     font "gui/fonts/amorserifpro22"
     }
     TextWidgetClass StatusLabel {
      visible 1
@@ -264,6 +422,7 @@ PanelWidgetClass root {
      hexactsize 0
      vexactsize 0
      text ""
+     font "gui/fonts/amorserifpro22"
      "text valign" center
     }
    }

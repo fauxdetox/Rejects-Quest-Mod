@@ -1,13 +1,17 @@
 // ============================================================
-//  QuestTrader | QT_QuestHistory.c  (v2.4)
+//  QuestTrader | QT_QuestHistory.c  (v2.5)
 //  Manual JSON serialisation. JsonSerializer cannot handle
 //  nested ref arrays so we build/parse JSON strings directly.
+//  Merged with JhonWinchester v2.0: journalStory, objectiveSummary.
 // ============================================================
 
 class QT_HistoryEntry
 {
     string questId;
     string questTitle;
+    string questDescription;
+    string questStory;
+    string objectiveSummary;
     string completedAt;
     int    completedEpoch;
     string rewardSummary;
@@ -19,12 +23,14 @@ class QT_PlayerHistory
     string playerUID;
     string playerName;
     int    totalQuestsCompleted;
+    int    journalUnlockCount;
     ref array<ref QT_HistoryEntry> entries;
 
     void QT_PlayerHistory()
     {
         entries              = new array<ref QT_HistoryEntry>();
         totalQuestsCompleted = 0;
+        journalUnlockCount   = 0;
     }
 }
 
@@ -65,24 +71,83 @@ class QT_QuestHistory
         }
 
         ref QT_HistoryEntry entry = new QT_HistoryEntry();
-        entry.questId        = def.id;
-        entry.questTitle     = def.title;
-        entry.completedEpoch = epochTime;
-        entry.completedAt    = GetTimeStr();
-        entry.rewardSummary  = rewardSummary;
-        entry.runNumber      = runNumber + 1;
+        entry.questId          = def.id;
+        entry.questTitle       = def.title;
+        entry.questDescription = def.description;
+        entry.questStory       = ResolveJournalStory(def);
+        entry.objectiveSummary = BuildObjectiveSummary(def);
+        entry.completedEpoch   = epochTime;
+        entry.completedAt      = GetTimeStr();
+        entry.rewardSummary    = rewardSummary;
+        entry.runNumber        = runNumber + 1;
 
         hist.entries.Insert(entry);
         hist.totalQuestsCompleted++;
+        hist.journalUnlockCount++;
         hist.playerName = playerName;
 
         SaveHistory(uid, hist);
         QT_Logger.GetInstance().Info("HISTORY", "Completed: " + def.title + " run#" + entry.runNumber.ToString(), uid, playerName);
     }
 
+    private string ResolveJournalStory(QT_QuestDef def)
+    {
+        if (!def) return "";
+        string storyOverride = QT_QuestManager.GetInstance().GetJournalStoryOverride(def.id);
+        if (storyOverride != "") return storyOverride;
+        if (def.journalStory != "") return def.journalStory;
+        if (def.rewardMessage != "") return def.rewardMessage;
+        return def.description;
+    }
+
+    private string BuildObjectiveSummary(QT_QuestDef def)
+    {
+        string summary = "";
+        if (!def) return summary;
+        foreach (QT_Objective obj : def.objectives)
+        {
+            if (summary != "") summary = summary + ", ";
+            if (obj.description != "")
+                summary = summary + obj.description;
+            else if (obj.itemClassName != "")
+                summary = summary + obj.requiredAmount.ToString() + "x " + QT_RPCManager.GetDisplayName(obj.itemClassName);
+            else if (obj.entityClassName != "")
+                summary = summary + obj.requiredAmount.ToString() + "x " + obj.entityClassName;
+            else if (obj.Targets && obj.Targets.Count() > 0)
+                summary = summary + obj.requiredAmount.ToString() + "x " + obj.Targets[0];
+        }
+        if (summary == "" && def.deliveryItemClass != "")
+            summary = "#QuestTrader_OBJECTIVE_DELIVER 1x " + QT_RPCManager.GetDisplayName(def.deliveryItemClass);
+        return summary;
+    }
+
     ref QT_PlayerHistory GetHistory(string uid, string playerName = "")
     {
         return GetOrLoad(uid, playerName);
+    }
+
+    void DeleteHistory(string uid)
+    {
+        if (m_cache.Contains(uid))
+            m_cache.Remove(uid);
+        string path = HISTORY_DIR + uid + "_history.json";
+        if (FileExist(path))
+            DeleteFile(path);
+    }
+
+    // Remove a specific quest entry from a player's history and re-save
+    void DeleteQuestHistory(string uid, string questId)
+    {
+        ref QT_PlayerHistory hist = GetOrLoad(uid, "");
+        if (!hist) return;
+
+        for (int i = hist.entries.Count() - 1; i >= 0; i--)
+        {
+            if (hist.entries[i].questId == questId)
+                hist.entries.Remove(i);
+        }
+        hist.totalQuestsCompleted = hist.entries.Count();
+        SaveHistory(uid, hist);
     }
 
     array<string> GetLeaderboardLines(int topN = 10)
@@ -111,24 +176,21 @@ class QT_QuestHistory
     }
 
     // ----------------------------------------------------------
-    //  Manual JSON parser
-    //  IndexOf(string) only - no start offset overload in Enforce.
-    //  We substring past already-processed content instead.
+    //  Manual JSON parser - Enforce Script IndexOf is single-arg only
     // ----------------------------------------------------------
 
     private void ParseHistoryJson(string json, QT_PlayerHistory hist)
     {
         hist.totalQuestsCompleted = ExtractInt(json, "totalQuestsCompleted");
+        hist.journalUnlockCount   = ExtractInt(json, "journalUnlockCount");
         hist.playerName           = ExtractStr(json, "playerName");
         hist.playerUID            = ExtractStr(json, "playerUID");
 
-        // Trim to everything after "entries":[
         int arrMarker = json.IndexOf("entries");
         if (arrMarker < 0) return;
         string afterEntries = json.Substring(arrMarker, json.Length() - arrMarker);
         int arrOpen = afterEntries.IndexOf("[");
         if (arrOpen < 0) return;
-        // Work inside the array content
         string arrContent = afterEntries.Substring(arrOpen + 1, afterEntries.Length() - arrOpen - 1);
 
         int pos = 0;
@@ -140,7 +202,6 @@ class QT_QuestHistory
             if (ch == "]") break;
             if (ch != "{") { pos++; continue; }
 
-            // Find matching closing brace
             int depth = 1;
             int objStart = pos;
             pos++;
@@ -154,20 +215,21 @@ class QT_QuestHistory
             string objJson = arrContent.Substring(objStart, pos - objStart);
 
             ref QT_HistoryEntry e = new QT_HistoryEntry();
-            e.questId        = ExtractStr(objJson, "questId");
-            e.questTitle     = ExtractStr(objJson, "questTitle");
-            e.completedAt    = ExtractStr(objJson, "completedAt");
-            e.completedEpoch = ExtractInt(objJson, "completedEpoch");
-            e.rewardSummary  = ExtractStr(objJson, "rewardSummary");
-            e.runNumber      = ExtractInt(objJson, "runNumber");
+            e.questId          = ExtractStr(objJson, "questId");
+            e.questTitle       = ExtractStr(objJson, "questTitle");
+            e.questDescription = ExtractStr(objJson, "questDescription");
+            e.questStory       = ExtractStr(objJson, "questStory");
+            e.objectiveSummary = ExtractStr(objJson, "objectiveSummary");
+            e.completedAt      = ExtractStr(objJson, "completedAt");
+            e.completedEpoch   = ExtractInt(objJson, "completedEpoch");
+            e.rewardSummary    = ExtractStr(objJson, "rewardSummary");
+            e.runNumber        = ExtractInt(objJson, "runNumber");
             hist.entries.Insert(e);
         }
 
         hist.totalQuestsCompleted = hist.entries.Count();
     }
 
-    // Search for: key + QUOTE + : + QUOTE  then read until next QUOTE.
-    // QUOTE is the literal double-quote char embedded via string literal.
     private string ExtractStr(string json, string key)
     {
         string QUOTE = "\"";
@@ -204,7 +266,7 @@ class QT_QuestHistory
     }
 
     // ----------------------------------------------------------
-    //  Manual JSON serialiser
+    //  Manual JSON serialiser - uses QUOTE var to avoid escaping
     // ----------------------------------------------------------
 
     private void SaveHistory(string uid, QT_PlayerHistory hist)
@@ -216,6 +278,7 @@ class QT_QuestHistory
         json += QUOTE + "playerUID" + QUOTE + ":" + QUOTE + hist.playerUID + QUOTE + ",";
         json += QUOTE + "playerName" + QUOTE + ":" + QUOTE + hist.playerName + QUOTE + ",";
         json += QUOTE + "totalQuestsCompleted" + QUOTE + ":" + hist.totalQuestsCompleted.ToString() + ",";
+        json += QUOTE + "journalUnlockCount" + QUOTE + ":" + hist.journalUnlockCount.ToString() + ",";
         json += QUOTE + "entries" + QUOTE + ":[";
 
         for (int i = 0; i < hist.entries.Count(); i++)
@@ -225,6 +288,9 @@ class QT_QuestHistory
             json += "{";
             json += QUOTE + "questId" + QUOTE + ":" + QUOTE + e.questId + QUOTE + ",";
             json += QUOTE + "questTitle" + QUOTE + ":" + QUOTE + e.questTitle + QUOTE + ",";
+            json += QUOTE + "questDescription" + QUOTE + ":" + QUOTE + e.questDescription + QUOTE + ",";
+            json += QUOTE + "questStory" + QUOTE + ":" + QUOTE + e.questStory + QUOTE + ",";
+            json += QUOTE + "objectiveSummary" + QUOTE + ":" + QUOTE + e.objectiveSummary + QUOTE + ",";
             json += QUOTE + "completedAt" + QUOTE + ":" + QUOTE + e.completedAt + QUOTE + ",";
             json += QUOTE + "completedEpoch" + QUOTE + ":" + e.completedEpoch.ToString() + ",";
             json += QUOTE + "rewardSummary" + QUOTE + ":" + QUOTE + e.rewardSummary + QUOTE + ",";

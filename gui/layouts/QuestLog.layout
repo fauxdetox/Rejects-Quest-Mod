@@ -12,8 +12,8 @@ PanelWidgetClass root {
    visible 1
    ignorepointer 0
    color 0.08 0.08 0.08 0.94
-   position 0.20 0.08
-   size 0.60 0.84
+   position 0.2 0.08
+   size 0.6 0.84
    hexactpos 0
    vexactpos 0
    hexactsize 0
@@ -25,13 +25,13 @@ PanelWidgetClass root {
      ignorepointer 1
      color 1 0.85 0.3 1
      position 0.02 0.015
-     size 0.70 0.055
+     size 0.7 0.055
      hexactpos 0
      vexactpos 0
      hexactsize 0
      vexactsize 0
      text "#QuestTrader_LOG_TITLE"
-     font "gui/fonts/sdf_MetronBook24"
+     font "gui"
      "exact text" 1
      "text valign" center
     }
@@ -54,7 +54,7 @@ PanelWidgetClass root {
      ignorepointer 0
      color 0.18 0.18 0.18 1
      position 0.02 0.09
-     size 0.20 0.055
+     size 0.2 0.055
      hexactpos 0
      vexactpos 0
      hexactsize 0
@@ -64,7 +64,7 @@ PanelWidgetClass root {
      text_proportion 0.45
     }
     ButtonWidgetClass TabLeaderboard {
-     visible 1
+     visible 0
      ignorepointer 0
      color 0.18 0.18 0.18 1
      position 0.23 0.09
@@ -75,7 +75,7 @@ PanelWidgetClass root {
      vexactsize 0
      style DayZDefaultButton
      text "#QuestTrader_LOG_LEADERBOARD"
-     text_proportion 0.40
+     text_proportion 0.4
     }
     PanelWidgetClass HistoryPane {
      visible 1
@@ -112,7 +112,9 @@ PanelWidgetClass root {
        hexactsize 0
        vexactsize 0
        text ""
-       font "gui/fonts/sdf_MetronBook24"
+       font "gui"
+       "exact text" 1
+       "exact text size" 12
        wrap 1
       }
      }
@@ -138,7 +140,9 @@ PanelWidgetClass root {
        hexactsize 0
        vexactsize 0
        text ""
-       font "gui/fonts/sdf_MetronBook24"
+       font "gui"
+       "exact text" 1
+       "exact text size" 12
        wrap 1
       }
      }

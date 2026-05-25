@@ -4,16 +4,46 @@
 //  4_World and 5_Mission can use it.
 // ============================================================
 
+class QT_OnlinePlayerInfo
+{
+    string key;
+    string uid;
+    string name;
+    string steamId;
+    PlayerBase player;
+}
+
 class QT_QuestManager
 {
     private static ref QT_QuestManager s_instance;
     private ref QT_Config m_config;
     private ref map<string, ref map<string, ref QT_PlayerQuestState>> m_playerStates;
     private ref QT_ItemSettings m_itemSettings;
+    private ref QT_JournalStoriesConfig m_journalStories;
+    private ref map<string, ref QT_OnlinePlayerInfo> m_onlinePlayers;
     // uid+questId -> spawned world object (for cleanup on cancel/complete)
     private ref map<string, Object> m_spawnedQuestItems;
+    // uid+questId -> spawned world objects (items or interaction props)
+    private ref map<string, ref array<Object>> m_spawnedQuestObjects;
     // uid+questId -> array of spawned entities (animals/zombies) for reset on reaccept
     private ref map<string, ref array<Object>> m_spawnedQuestEntities;
+    // victim signature + target token -> match result
+    private ref map<string, bool> m_killMatchCache;
+
+    // --------------------------------------------------------
+    //  Estado de attacker/credit por entidade (substitui as
+    //  variáveis de instância que estavam em modded class EntityAI).
+    //  Chave: string do ID interno da entidade.
+    // --------------------------------------------------------
+    // Attacker tracking: EntityLowId -> Player UID (string)
+    // Guardamos o UID string e não o ponteiro ao PlayerBase para evitar
+    // referência inválida caso o jogador desconecte durante o bleed-out.
+    private ref map<int, string> m_qt_lastAttackerUID;
+    private ref map<int, int>    m_qt_lastHitTime;
+    private ref map<int, int>    m_qt_creditedKillTime;
+    private ref map<string, bool>  m_DirtyPlayers;
+    private ref map<string, float> m_LastSaveRequestTime;
+    private ref array<string>      m_SaveQueue;
 
     static QT_QuestManager GetInstance()
     {
@@ -26,10 +56,20 @@ class QT_QuestManager
         // Register RPC dispatcher so 3_Game hook can call into 4_World
         QT_RPCDispatcherBase.s_instance = new QT_RPCDispatcher();
         m_playerStates      = new map<string, ref map<string, ref QT_PlayerQuestState>>();
+        m_onlinePlayers     = new map<string, ref QT_OnlinePlayerInfo>();
         m_spawnedQuestItems    = new map<string, Object>();
+        m_spawnedQuestObjects  = new map<string, ref array<Object>>();
         m_spawnedQuestEntities = new map<string, ref array<Object>>();
+        m_killMatchCache    = new map<string, bool>();
+        m_qt_lastAttackerUID   = new map<int, string>();
+        m_qt_lastHitTime       = new map<int, int>();
+        m_qt_creditedKillTime  = new map<int, int>();
+        m_DirtyPlayers         = new map<string, bool>();
+        m_LastSaveRequestTime  = new map<string, float>();
+        m_SaveQueue            = new array<string>();
         m_config            = QT_ConfigLoader.LoadConfig();
         m_itemSettings      = QT_ItemSettingsLoader.LoadItemSettings();
+        m_journalStories    = QT_JournalStoriesLoader.LoadStories();
         int qc = 0;
         if (m_config) qc = m_config.Quests.Count();
         QT_Logger.GetInstance().Info("SYSTEM", "QuestManager initialised. " + qc + " quests loaded.");
@@ -54,10 +94,26 @@ class QT_QuestManager
 
         m_config = newConfig;
         m_itemSettings = newItemSettings;
+        m_journalStories = QT_JournalStoriesLoader.LoadStories();
+        m_killMatchCache.Clear();
         SyncLoadedPlayerStatesWithConfig();
 
         QT_Logger.GetInstance().Info("ADMIN", "Config reloaded. " + m_config.TraderNPCPositions.Count() + " traders, " + m_config.Quests.Count() + " quests.");
         return true;
+    }
+
+    string GetJournalStoryOverride(string questId)
+    {
+        if (questId == "") return "";
+        if (!m_journalStories || !m_journalStories.stories) return "";
+        if (!m_journalStories.stories.Contains(questId)) return "";
+        return m_journalStories.stories.Get(questId);
+    }
+
+    array<string> GetJournalOrder()
+    {
+        if (!m_journalStories || !m_journalStories.order) return new array<string>();
+        return m_journalStories.order;
     }
 
     private void SyncLoadedPlayerStatesWithConfig()
@@ -80,12 +136,8 @@ class QT_QuestManager
 
     void OnPlayerConnected(string uid)
     {
-        // Guard: don't reload if already in memory (OnConnect can fire twice)
         if (m_playerStates.Contains(uid))
-        {
-            QT_Logger.GetInstance().Info("CONNECT", "Player reconnected (data already in memory).", uid);
             return;
-        }
 
         ref map<string, ref QT_PlayerQuestState> loaded = QT_PersistenceManager.LoadPlayer(uid);
         if (loaded)
@@ -95,27 +147,301 @@ class QT_QuestManager
         QT_Logger.GetInstance().Info("CONNECT", "Player connected.", uid);
     }
 
+    void RegisterOnlinePlayer(PlayerBase player, PlayerIdentity identity = null, bool notifyAdmins = true)
+    {
+        if (!GetGame().IsServer()) return;
+        if (!identity && player)
+            identity = player.GetIdentity();
+        if (!identity) return;
+
+        string uid = identity.GetId();
+        string steamId = identity.GetPlainId();
+        string key = BuildOnlinePlayerKey(uid, steamId);
+        if (key == "") return;
+        if (uid == "") uid = key;
+        OnPlayerConnected(uid);
+
+        bool isNewOnline = !m_onlinePlayers.Contains(key);
+        ref QT_OnlinePlayerInfo info;
+        if (m_onlinePlayers.Contains(key))
+            info = m_onlinePlayers.Get(key);
+        else
+        {
+            info = new QT_OnlinePlayerInfo();
+            m_onlinePlayers.Insert(key, info);
+        }
+
+        info.key = key;
+        info.uid = uid;
+        info.name = identity.GetName();
+        info.steamId = steamId;
+        if (player)
+            info.player = player;
+
+        if (isNewOnline && notifyAdmins)
+        {
+            QT_Logger.GetInstance().Info("CONNECT", "[QuestTraderAdmin] Added player: " + info.name, uid);
+        }
+    }
+
+    void RefreshOnlinePlayersFromServer()
+    {
+        if (!GetGame().IsServer()) return;
+
+        ref map<string, bool> seenKeys = new map<string, bool>();
+        ref array<PlayerIdentity> identities = new array<PlayerIdentity>();
+        GetGame().GetPlayerIndentities(identities);
+        bool hasAuthoritativeIdentities = identities.Count() > 0;
+        foreach (PlayerIdentity identity : identities)
+        {
+            if (!identity) continue;
+            RegisterOnlinePlayer(null, identity, false);
+            string identityKey = BuildOnlinePlayerKey(identity.GetId(), identity.GetPlainId());
+            if (identityKey != "") seenKeys.Set(identityKey, true);
+        }
+
+        array<Man> players = new array<Man>();
+        GetGame().GetPlayers(players);
+        foreach (Man gameMan : players)
+        {
+            PlayerBase gamePlayer = PlayerBase.Cast(gameMan);
+            if (!gamePlayer || !gamePlayer.GetIdentity()) continue;
+            RegisterOnlinePlayer(gamePlayer, gamePlayer.GetIdentity(), false);
+            string gameKey = BuildOnlinePlayerKey(gamePlayer.GetIdentity().GetId(), gamePlayer.GetIdentity().GetPlainId());
+            if (gameKey != "") seenKeys.Set(gameKey, true);
+        }
+
+        players.Clear();
+        GetGame().GetWorld().GetPlayerList(players);
+        foreach (Man worldMan : players)
+        {
+            PlayerBase worldPlayer = PlayerBase.Cast(worldMan);
+            if (!worldPlayer || !worldPlayer.GetIdentity()) continue;
+            RegisterOnlinePlayer(worldPlayer, worldPlayer.GetIdentity(), false);
+            string worldKey = BuildOnlinePlayerKey(worldPlayer.GetIdentity().GetId(), worldPlayer.GetIdentity().GetPlainId());
+            if (worldKey != "") seenKeys.Set(worldKey, true);
+        }
+
+        if (hasAuthoritativeIdentities && seenKeys.Count() > 0)
+        {
+            ref array<string> removeKeys = new array<string>();
+            foreach (string onlineKey, QT_OnlinePlayerInfo info : m_onlinePlayers)
+            {
+                if (!seenKeys.Contains(onlineKey))
+                    removeKeys.Insert(onlineKey);
+            }
+
+            foreach (string removeKey : removeKeys)
+            {
+                QT_OnlinePlayerInfo removed = m_onlinePlayers.Get(removeKey);
+                string removedName = removeKey;
+                if (removed && removed.name != "") removedName = removed.name;
+                m_onlinePlayers.Remove(removeKey);
+                QT_Logger.GetInstance().Info("CONNECT", "[QuestTraderAdmin] Removed player: " + removedName);
+            }
+        }
+    }
+
     void OnPlayerDisconnected(string uid)
     {
+        bool wasKnown = false;
         if (m_playerStates.Contains(uid))
         {
-            // Save first, then remove from memory
+            wasKnown = true;
             auto questMap = m_playerStates.Get(uid);
             if (questMap)
             {
-                Print("[QuestTrader] Saving on disconnect for: " + uid + " (" + questMap.Count() + " quests)");
-                QT_PersistenceManager.SavePlayer(uid, questMap);
+                if (SavePlayerImmediate(uid, "disconnect"))
+                    m_playerStates.Remove(uid);
+                else
+                    MarkPlayerDirty(uid);
             }
-            m_playerStates.Remove(uid);
+            else
+            {
+                m_playerStates.Remove(uid);
+            }
         }
-        QT_Logger.GetInstance().Info("CONNECT", "Player disconnected.", uid);
+        ref array<string> removeKeys = new array<string>();
+        foreach (string onlineKey, QT_OnlinePlayerInfo info : m_onlinePlayers)
+        {
+            if (!info) continue;
+            if (onlineKey == uid || info.uid == uid || info.steamId == uid)
+                removeKeys.Insert(onlineKey);
+        }
+
+        foreach (string removeKey : removeKeys)
+        {
+            wasKnown = true;
+            m_onlinePlayers.Remove(removeKey);
+        }
+        if (wasKnown)
+        {
+            QT_Logger.GetInstance().Info("CONNECT", "Player disconnected.", uid);
+        }
+    }
+
+    void GetOnlinePlayers(array<PlayerBase> output)
+    {
+        if (!output) return;
+
+        foreach (string uid, QT_OnlinePlayerInfo info : m_onlinePlayers)
+        {
+            if (info && info.player)
+                output.Insert(info.player);
+        }
+    }
+
+    void GetOnlinePlayerInfos(array<ref QT_OnlinePlayerInfo> output)
+    {
+        if (!output) return;
+
+        foreach (string uid, QT_OnlinePlayerInfo info : m_onlinePlayers)
+        {
+            if (info && info.uid != "")
+                output.Insert(info);
+        }
+    }
+
+    private string BuildOnlinePlayerKey(string uid, string steamId)
+    {
+        steamId = steamId.Trim();
+        if (steamId != "") return steamId;
+
+        uid = uid.Trim();
+        return uid;
     }
 
     void SaveAll()
     {
+        QT_Perf.Log("Full backup started players=" + m_playerStates.Count().ToString());
+        int saved = 0;
+        int failed = 0;
         foreach (string uid, map<string, ref QT_PlayerQuestState> questMap : m_playerStates)
-            QT_PersistenceManager.SavePlayer(uid, questMap);
-        QT_Logger.GetInstance().Info("PERSIST", "All player data saved.");
+        {
+            if (QT_PersistenceManager.ForceSavePlayer(uid, questMap))
+            {
+                saved++;
+                if (m_DirtyPlayers.Contains(uid)) m_DirtyPlayers.Set(uid, false);
+                RemoveFromSaveQueue(uid);
+            }
+            else
+            {
+                failed++;
+                MarkPlayerDirty(uid);
+            }
+        }
+        QT_Perf.Log("Full backup finished saved=" + saved.ToString() + " failed=" + failed.ToString());
+        QT_Logger.GetInstance().Info("PERSIST", "Full player backup saved.");
+    }
+
+    void ProcessSaveQueue()
+    {
+        if (!GetGame().IsServer()) return;
+        if (!m_SaveQueue || m_SaveQueue.Count() == 0)
+        {
+            QT_Perf.Log("Save queue size=0");
+            return;
+        }
+
+        int maxPerTick = QT_Perf.SaveMaxPlayersPerTick();
+        int processed = 0;
+        float now = GetGame().GetTime() / 1000.0;
+        QT_Perf.Log("Save queue size=" + m_SaveQueue.Count().ToString());
+
+        for (int i = m_SaveQueue.Count() - 1; i >= 0 && processed < maxPerTick; i--)
+        {
+            string uid = m_SaveQueue[i];
+            if (uid == "" || !m_DirtyPlayers.Contains(uid) || !m_DirtyPlayers.Get(uid))
+            {
+                m_SaveQueue.Remove(i);
+                continue;
+            }
+
+            float lastRequest = 0;
+            if (m_LastSaveRequestTime.Contains(uid))
+                lastRequest = m_LastSaveRequestTime.Get(uid);
+
+            float debounce = QT_Perf.SaveDebounceSeconds();
+            if (now - lastRequest < debounce)
+            {
+                QT_Perf.Log("Player save skipped by debounce uid=" + uid);
+                continue;
+            }
+
+            processed++;
+            if (SavePlayerImmediate(uid, "queue"))
+            {
+                RemoveFromSaveQueue(uid);
+            }
+        }
+    }
+
+    void MarkPlayerDirty(string uid)
+    {
+        if (uid == "") return;
+        if (!m_DirtyPlayers) m_DirtyPlayers = new map<string, bool>();
+        if (!m_LastSaveRequestTime) m_LastSaveRequestTime = new map<string, float>();
+        if (!m_SaveQueue) m_SaveQueue = new array<string>();
+
+        m_DirtyPlayers.Set(uid, true);
+        m_LastSaveRequestTime.Set(uid, GetGame().GetTime() / 1000.0);
+        QT_Perf.Log("Player marked dirty uid=" + uid);
+
+        if (!IsPlayerQueuedForSave(uid))
+        {
+            m_SaveQueue.Insert(uid);
+            QT_Perf.Log("Player queued for save uid=" + uid);
+        }
+    }
+
+    bool SavePlayerImmediate(string uid, string reason = "manual")
+    {
+        if (uid == "") return false;
+        if (!m_playerStates.Contains(uid)) return false;
+
+        map<string, ref QT_PlayerQuestState> questMap = m_playerStates.Get(uid);
+        if (!questMap) return false;
+
+        bool ok = QT_PersistenceManager.ForceSavePlayer(uid, questMap);
+        if (!ok) return false;
+
+        if (m_DirtyPlayers.Contains(uid)) m_DirtyPlayers.Set(uid, false);
+        RemoveFromSaveQueue(uid);
+        if (reason == "queue" && !IsPlayerOnline(uid))
+            m_playerStates.Remove(uid);
+        QT_Perf.Log("Player saved successfully uid=" + uid + " reason=" + reason);
+        return true;
+    }
+
+    private bool IsPlayerOnline(string uid)
+    {
+        foreach (string onlineKey, QT_OnlinePlayerInfo info : m_onlinePlayers)
+        {
+            if (!info) continue;
+            if (onlineKey == uid || info.uid == uid || info.steamId == uid)
+                return true;
+        }
+        return false;
+    }
+
+    private bool IsPlayerQueuedForSave(string uid)
+    {
+        if (!m_SaveQueue) return false;
+        foreach (string queuedUid : m_SaveQueue)
+        {
+            if (queuedUid == uid) return true;
+        }
+        return false;
+    }
+
+    private void RemoveFromSaveQueue(string uid)
+    {
+        if (!m_SaveQueue) return;
+        for (int i = m_SaveQueue.Count() - 1; i >= 0; i--)
+        {
+            if (m_SaveQueue[i] == uid)
+                m_SaveQueue.Remove(i);
+        }
     }
 
     ref map<string, ref QT_PlayerQuestState> GetOrCreatePlayerMap(string uid)
@@ -126,7 +452,6 @@ class QT_QuestManager
             ref map<string, ref QT_PlayerQuestState> loaded = QT_PersistenceManager.LoadPlayer(uid);
             if (loaded)
             {
-                Print("[QuestTrader] GetOrCreatePlayerMap - loaded from disk for: " + uid);
                 m_playerStates.Insert(uid, loaded);
             }
             else
@@ -155,6 +480,24 @@ class QT_QuestManager
         return playerMap.Get(questId);
     }
 
+    ref QT_PlayerQuestState GetExistingPlayerQuestState(string uid, string questId)
+    {
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        if (!playerMap || !playerMap.Contains(questId)) return null;
+        return playerMap.Get(questId);
+    }
+
+    private void EnsureObjectiveProgress(QT_PlayerQuestState qs, QT_QuestDef def)
+    {
+        if (!qs || !def || !qs.objectiveProgress) return;
+
+        while (qs.objectiveProgress.Count() < def.objectives.Count())
+            qs.objectiveProgress.Insert(0);
+
+        while (qs.objectiveProgress.Count() > def.objectives.Count())
+            qs.objectiveProgress.Remove(qs.objectiveProgress.Count() - 1);
+    }
+
     QT_QuestDef GetQuestDef(string questId)
     {
         if (!m_config) return null;
@@ -163,13 +506,10 @@ class QT_QuestManager
         return null;
     }
 
-    // Admin helper: resolve a quest by ID, title, or (if blank) the player's first active quest.
-    // Allows admins to type either the internal quest_ID or the human-readable quest title.
     QT_QuestDef ResolveQuestForAdmin(string uid, string input)
     {
         if (!m_config) return null;
 
-        // Blank input -> use the player's first active quest
         string trimmed = input.Trim();
         if (trimmed == "")
         {
@@ -178,26 +518,23 @@ class QT_QuestManager
             return null;
         }
 
-        // Exact ID match
-        foreach (QT_QuestDef def : m_config.Quests)
-            if (def.id == trimmed) return def;
+        foreach (QT_QuestDef defById : m_config.Quests)
+            if (defById.id == trimmed) return defById;
 
-        // Case-insensitive title match
         string inputLower = trimmed;
         inputLower.ToLower();
-        foreach (QT_QuestDef defT : m_config.Quests)
+        foreach (QT_QuestDef defByTitle : m_config.Quests)
         {
-            string t = defT.title;
-            t.ToLower();
-            if (t == inputLower) return defT;
+            string titleLower = defByTitle.title;
+            titleLower.ToLower();
+            if (titleLower == inputLower) return defByTitle;
         }
 
-        // Partial title match (contains)
-        foreach (QT_QuestDef defP : m_config.Quests)
+        foreach (QT_QuestDef defPartial : m_config.Quests)
         {
-            string tp = defP.title;
-            tp.ToLower();
-            if (tp.Contains(inputLower)) return defP;
+            string partialTitle = defPartial.title;
+            partialTitle.ToLower();
+            if (partialTitle.Contains(inputLower)) return defPartial;
         }
 
         return null;
@@ -209,7 +546,7 @@ class QT_QuestManager
         if (!m_config) return result;
         foreach (QT_QuestDef def : m_config.Quests)
         {
-            QT_QuestState state = GetEffectiveState(playerUID, def.id);
+            QT_QuestState state = GetEffectiveStateNoCreate(playerUID, def.id);
 
             // Hide locked quests. A quest is visible only when it can be
             // accepted now, is already active/ready, or belongs in DONE.
@@ -240,7 +577,7 @@ class QT_QuestManager
         if (!def) return false;
         foreach (string preReqId : def.prerequisiteQuestIds)
         {
-            if (GetEffectiveState(uid, preReqId) != QT_QuestState.TURNED_IN)
+            if (GetEffectiveStateNoCreate(uid, preReqId) != QT_QuestState.TURNED_IN)
                 return false;
         }
         return true;
@@ -250,11 +587,16 @@ class QT_QuestManager
     {
         array<ref QT_QuestDef> result = new array<ref QT_QuestDef>();
         if (!m_config) return result;
-        foreach (QT_QuestDef def : m_config.Quests)
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        foreach (string questId, QT_PlayerQuestState qs : playerMap)
         {
-            QT_QuestState st = GetEffectiveState(uid, def.id);
+            if (!qs) continue;
+            QT_QuestState st = GetEffectiveStateNoCreate(uid, questId);
             if (st == QT_QuestState.ACTIVE || st == QT_QuestState.COMPLETED)
-                result.Insert(def);
+            {
+                QT_QuestDef def = GetQuestDef(questId);
+                if (def) result.Insert(def);
+            }
         }
         return result;
     }
@@ -264,7 +606,7 @@ class QT_QuestManager
         if (!player || !player.GetIdentity() || !def)
             return QT_QuestState.AVAILABLE;
 
-        QT_QuestState state = GetEffectiveState(player.GetIdentity().GetId(), def.id);
+        QT_QuestState state = GetEffectiveStateNoCreate(player.GetIdentity().GetId(), def.id);
         if (state != QT_QuestState.ACTIVE && state != QT_QuestState.COMPLETED)
             return state;
 
@@ -328,6 +670,22 @@ class QT_QuestManager
         return sig;
     }
 
+    bool HasActiveInventoryQuest(string uid)
+    {
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        foreach (string questId, QT_PlayerQuestState qs : playerMap)
+        {
+            if (!qs) continue;
+            if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED) continue;
+
+            QT_QuestDef def = GetQuestDef(questId);
+            if (!def) continue;
+            if (def.type == QT_QuestType.COLLECT || def.type == QT_QuestType.DELIVER)
+                return true;
+        }
+        return false;
+    }
+
     string BuildReadyInventoryQuestSignature(PlayerBase player)
     {
         if (!player || !player.GetIdentity()) return "";
@@ -348,9 +706,25 @@ class QT_QuestManager
     QT_QuestState GetEffectiveState(string uid, string questId)
     {
         auto qs = GetPlayerQuestState(uid, questId);
+        return ResolveEffectiveState(qs, uid, questId);
+    }
+
+    QT_QuestState GetEffectiveStateNoCreate(string uid, string questId)
+    {
+        auto qs = GetExistingPlayerQuestState(uid, questId);
+        if (!qs) return QT_QuestState.AVAILABLE;
+        return ResolveEffectiveState(qs, uid, questId);
+    }
+
+    private QT_QuestState ResolveEffectiveState(QT_PlayerQuestState qs, string uid, string questId)
+    {
+        if (!qs) return QT_QuestState.AVAILABLE;
+        QT_QuestDef stateDef = GetQuestDef(questId);
+        if (stateDef) EnsureObjectiveProgress(qs, stateDef);
+
         if (qs.state == QT_QuestState.COOLDOWN)
         {
-            QT_QuestDef def = GetQuestDef(questId);
+            QT_QuestDef def = stateDef;
             if (def && def.repeatable)
             {
                 int elapsed = GetGame().GetTime() / 1000 - qs.completedTimestamp;
@@ -365,7 +739,7 @@ class QT_QuestManager
         // Auto-promote kill quests to COMPLETED if all objectives met
         if (qs.state == QT_QuestState.ACTIVE)
         {
-            QT_QuestDef kDef = GetQuestDef(questId);
+            QT_QuestDef kDef = stateDef;
             if (kDef && kDef.type == QT_QuestType.KILL)
             {
                 bool allKilled = true;
@@ -408,15 +782,13 @@ class QT_QuestManager
 
         foreach (string preReqId : def.prerequisiteQuestIds)
         {
-            if (GetEffectiveState(uid, preReqId) != QT_QuestState.TURNED_IN)
+            if (GetEffectiveStateNoCreate(uid, preReqId) != QT_QuestState.TURNED_IN)
             {
                 QT_QuestDef pre = GetQuestDef(preReqId);
                 string preName = preReqId;
                 if (pre) preName = pre.title;
-                QT_RPCManager.SendToast(player, "Complete '" + preName + "' first!", QT_ToastType.WARNING);
-                string prereqMsg = "[Quest] Complete '" + preName + "' before accepting this quest.";
-                GetGame().RPCSingleParam(player, ERPCs.RPC_USER_ACTION_MESSAGE,
-                    new Param1<string>(prereqMsg), true, player.GetIdentity());
+                QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_COMPLETE_PREREQ " + preName, QT_ToastType.WARNING);
+                QT_RPCManager.SendChatLine(player, "#QuestTrader_CHAT_PREFIX #QuestTrader_CHAT_COMPLETE_BEFORE_ACCEPT: " + preName);
                 return false;
             }
         }
@@ -434,15 +806,21 @@ class QT_QuestManager
         if (def.type == QT_QuestType.DELIVER)
             GiveDeliveryItem(player, def);
 
-        QT_PersistenceManager.SavePlayer(uid, GetOrCreatePlayerMap(uid));
+        MarkPlayerDirty(uid);
         QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_QUEST_ACCEPTED " + def.title, QT_ToastType.ACCEPT);
         QT_RPCManager.SendQuestInfo(player, def);
         QT_RPCManager.SendHUDUpdate(player);
         QT_Logger.GetInstance().Info("QUEST", "Accepted: " + def.title, uid, player.GetIdentity().GetName());
 
-        // Spawn quest entities nearby for kill quests
-        if (def.type == QT_QuestType.KILL)
+        // Spawn quest entities only when explicitly configured for kill quests
+        // and the global kill target spawning setting is enabled
+        QT_Config cfg = GetConfig();
+        bool spawnEnabled = !cfg || !cfg.Settings || cfg.Settings.EnableKillTargetSpawning;
+        if (def.type == QT_QuestType.KILL && def.spawnKillTarget && spawnEnabled)
             SpawnQuestEntities(player, def);
+
+        if (def.type == QT_QuestType.INTERACT && def.spawnInteractionObject)
+            SpawnInteractionObject(uid, def);
 
         // Spawn a world item at a fixed position if defined
         if (def.spawnItemClass != "")
@@ -458,8 +836,7 @@ class QT_QuestManager
                 Object obj = GetGame().CreateObject(si.itemClass, pos, false, true);
                 if (obj)
                 {
-                    string key = uid + "_" + def.id + "_" + si.itemClass;
-                    m_spawnedQuestItems.Insert(key, obj);
+                    TrackQuestObject(uid, def.id, obj);
                     Print("[QuestTrader] Spawned quest item: " + si.itemClass + " at " + pos.ToString());
                 }
             }
@@ -510,6 +887,45 @@ class QT_QuestManager
         Print("[QuestTrader] Spawned quest item: " + def.spawnItemClass + " at " + pos.ToString() + " for player: " + uid);
     }
 
+    private void SpawnInteractionObject(string uid, QT_QuestDef def)
+    {
+        if (!def || def.interactionObjectClassName == "") return;
+
+        vector pos = def.interactionPosition;
+        if (pos == vector.Zero)
+        {
+            Print("[QuestTrader] Interaction quest requested object spawn without interactionPosition: " + def.id);
+            return;
+        }
+        if (pos[1] == 0)
+            pos[1] = GetGame().SurfaceY(pos[0], pos[2]) + 0.1;
+
+        Object obj = GetGame().CreateObject(def.interactionObjectClassName, pos, false, true);
+        if (!obj)
+        {
+            Print("[QuestTrader] ERROR - Could not spawn interaction object: " + def.interactionObjectClassName + " for quest: " + def.id);
+            return;
+        }
+
+        TrackQuestObject(uid, def.id, obj);
+        Print("[QuestTrader] Spawned interaction object: " + def.interactionObjectClassName + " at " + pos.ToString() + " for quest: " + def.id);
+    }
+
+    private void TrackQuestObject(string uid, string questId, Object obj)
+    {
+        if (!obj) return;
+        string key = uid + "_" + questId;
+        ref array<Object> objects;
+        if (m_spawnedQuestObjects.Contains(key))
+            objects = m_spawnedQuestObjects.Get(key);
+        else
+        {
+            objects = new array<Object>();
+            m_spawnedQuestObjects.Insert(key, objects);
+        }
+        objects.Insert(obj);
+    }
+
     private void CleanupQuestItem(string uid, string questId)
     {
         string key = uid + "_" + questId;
@@ -519,6 +935,17 @@ class QT_QuestManager
             if (obj) GetGame().ObjectDelete(obj);
             m_spawnedQuestItems.Remove(key);
             Print("[QuestTrader] Cleaned up quest item for player: " + uid + " quest: " + questId);
+        }
+
+        if (m_spawnedQuestObjects.Contains(key))
+        {
+            array<Object> objects = m_spawnedQuestObjects.Get(key);
+            foreach (Object spawnedObj : objects)
+            {
+                if (spawnedObj) GetGame().ObjectDelete(spawnedObj);
+            }
+            m_spawnedQuestObjects.Remove(key);
+            Print("[QuestTrader] Cleaned up spawned quest objects for player: " + uid + " quest: " + questId);
         }
 
         // Also delete and clear tracked entity references on cleanup (turn-in, cancel, complete)
@@ -571,7 +998,175 @@ class QT_QuestManager
             return "Animal_GallusGallusDomesticus";
         if (entityClassName == "BosTaurus")
             return "Animal_BosTaurus_Brown";
-        // Infected and anything already prefixed pass through directly
+
+        // Infected — "Zmb" and similar partial names are kill-tracking aliases,
+        // not real classnames. Map to a random mix of spawnable infected.
+        bool isInfectedAlias = (entityClassName == "Zmb" || entityClassName == "ZombieBase" || entityClassName == "Infected" || entityClassName == "infected");
+        if (isInfectedAlias)
+        {
+            ref array<string> zmbClasses = new array<string>();
+            zmbClasses.Insert("ZmbF_BlueCollarFat_Blue");
+            zmbClasses.Insert("ZmbF_BlueCollarFat_Green");
+            zmbClasses.Insert("ZmbF_BlueCollarFat_Red");
+            zmbClasses.Insert("ZmbF_BlueCollarFat_White");
+            zmbClasses.Insert("ZmbF_CitizenANormal_Beige");
+            zmbClasses.Insert("ZmbF_CitizenANormal_Blue");
+            zmbClasses.Insert("ZmbF_CitizenANormal_Brown");
+            zmbClasses.Insert("ZmbF_CitizenBSkinny");
+            zmbClasses.Insert("ZmbF_ClerkFat_Black");
+            zmbClasses.Insert("ZmbF_ClerkFat_BluePattern");
+            zmbClasses.Insert("ZmbF_ClerkFat_GreyPattern");
+            zmbClasses.Insert("ZmbF_ClerkFat_White");
+            zmbClasses.Insert("ZmbF_Clerk_Normal_Blue");
+            zmbClasses.Insert("ZmbF_Clerk_Normal_Green");
+            zmbClasses.Insert("ZmbF_Clerk_Normal_Red");
+            zmbClasses.Insert("ZmbF_Clerk_Normal_White");
+            zmbClasses.Insert("ZmbF_DoctorSkinny");
+            zmbClasses.Insert("ZmbF_HikerSkinny_Blue");
+            zmbClasses.Insert("ZmbF_HikerSkinny_Green");
+            zmbClasses.Insert("ZmbF_HikerSkinny_Grey");
+            zmbClasses.Insert("ZmbF_HikerSkinny_Red");
+            zmbClasses.Insert("ZmbF_JoggerSkinny_Blue");
+            zmbClasses.Insert("ZmbF_JoggerSkinny_Brown");
+            zmbClasses.Insert("ZmbF_JoggerSkinny_Green");
+            zmbClasses.Insert("ZmbF_JoggerSkinny_Red");
+            zmbClasses.Insert("ZmbF_JournalistNormal_Blue");
+            zmbClasses.Insert("ZmbF_JournalistNormal_Green");
+            zmbClasses.Insert("ZmbF_JournalistNormal_Red");
+            zmbClasses.Insert("ZmbF_JournalistNormal_White");
+            zmbClasses.Insert("ZmbF_MechanicNormal_Beige");
+            zmbClasses.Insert("ZmbF_MechanicNormal_Green");
+            zmbClasses.Insert("ZmbF_MechanicNormal_Grey");
+            zmbClasses.Insert("ZmbF_MechanicNormal_Orange");
+            zmbClasses.Insert("ZmbF_MilkMaidOld_Beige");
+            zmbClasses.Insert("ZmbF_MilkMaidOld_Black");
+            zmbClasses.Insert("ZmbF_MilkMaidOld_Green");
+            zmbClasses.Insert("ZmbF_MilkMaidOld_Grey");
+            zmbClasses.Insert("ZmbF_NurseFat");
+            zmbClasses.Insert("ZmbF_ParamedicNormal_Blue");
+            zmbClasses.Insert("ZmbF_ParamedicNormal_Green");
+            zmbClasses.Insert("ZmbF_ParamedicNormal_Red");
+            zmbClasses.Insert("ZmbF_PatientOld");
+            zmbClasses.Insert("ZmbF_PoliceWomanNormal");
+            zmbClasses.Insert("ZmbF_ShortSkirt_beige");
+            zmbClasses.Insert("ZmbF_ShortSkirt_black");
+            zmbClasses.Insert("ZmbF_ShortSkirt_brown");
+            zmbClasses.Insert("ZmbF_ShortSkirt_checks");
+            zmbClasses.Insert("ZmbF_ShortSkirt_green");
+            zmbClasses.Insert("ZmbF_ShortSkirt_grey");
+            zmbClasses.Insert("ZmbF_ShortSkirt_red");
+            zmbClasses.Insert("ZmbF_ShortSkirt_stripes");
+            zmbClasses.Insert("ZmbF_ShortSkirt_white");
+            zmbClasses.Insert("ZmbF_ShortSkirt_yellow");
+            zmbClasses.Insert("ZmbF_SkaterYoung_Brown");
+            zmbClasses.Insert("ZmbF_SkaterYoung_Striped");
+            zmbClasses.Insert("ZmbF_SkaterYoung_Violet");
+            zmbClasses.Insert("ZmbF_SurvivorNormal_Blue");
+            zmbClasses.Insert("ZmbF_SurvivorNormal_Orange");
+            zmbClasses.Insert("ZmbF_SurvivorNormal_Red");
+            zmbClasses.Insert("ZmbF_SurvivorNormal_White");
+            zmbClasses.Insert("ZmbF_VillagerOld_Blue");
+            zmbClasses.Insert("ZmbF_VillagerOld_Green");
+            zmbClasses.Insert("ZmbF_VillagerOld_Red");
+            zmbClasses.Insert("ZmbF_VillagerOld_White");
+            zmbClasses.Insert("ZmbM_CitizenASkinny_Blue");
+            zmbClasses.Insert("ZmbM_CitizenASkinny_Brown");
+            zmbClasses.Insert("ZmbM_CitizenASkinny_Grey");
+            zmbClasses.Insert("ZmbM_CitizenASkinny_Red");
+            zmbClasses.Insert("ZmbM_CitizenBFat_Blue");
+            zmbClasses.Insert("ZmbM_CitizenBFat_Green");
+            zmbClasses.Insert("ZmbM_CitizenBFat_Red");
+            zmbClasses.Insert("ZmbM_ClerkFat_Brown");
+            zmbClasses.Insert("ZmbM_ClerkFat_Grey");
+            zmbClasses.Insert("ZmbM_ClerkFat_Khaki");
+            zmbClasses.Insert("ZmbM_ClerkFat_White");
+            zmbClasses.Insert("ZmbM_CommercialPilotOld_Blue");
+            zmbClasses.Insert("ZmbM_CommercialPilotOld_Brown");
+            zmbClasses.Insert("ZmbM_CommercialPilotOld_Grey");
+            zmbClasses.Insert("ZmbM_CommercialPilotOld_Olive");
+            zmbClasses.Insert("ZmbM_ConstrWorkerNormal_Beige");
+            zmbClasses.Insert("ZmbM_ConstrWorkerNormal_Black");
+            zmbClasses.Insert("ZmbM_ConstrWorkerNormal_Green");
+            zmbClasses.Insert("ZmbM_ConstrWorkerNormal_Grey");
+            zmbClasses.Insert("ZmbM_DoctorFat");
+            zmbClasses.Insert("ZmbM_FarmerFat_Beige");
+            zmbClasses.Insert("ZmbM_FarmerFat_Blue");
+            zmbClasses.Insert("ZmbM_FarmerFat_Brown");
+            zmbClasses.Insert("ZmbM_FarmerFat_Green");
+            zmbClasses.Insert("ZmbM_FirefighterNormal");
+            zmbClasses.Insert("ZmbM_FishermanOld_Blue");
+            zmbClasses.Insert("ZmbM_FishermanOld_Green");
+            zmbClasses.Insert("ZmbM_FishermanOld_Grey");
+            zmbClasses.Insert("ZmbM_FishermanOld_Red");
+            zmbClasses.Insert("ZmbM_HandymanNormal_Beige");
+            zmbClasses.Insert("ZmbM_HandymanNormal_Blue");
+            zmbClasses.Insert("ZmbM_HandymanNormal_Green");
+            zmbClasses.Insert("ZmbM_HandymanNormal_Grey");
+            zmbClasses.Insert("ZmbM_HandymanNormal_White");
+            zmbClasses.Insert("ZmbM_HeavyIndustryWorker");
+            zmbClasses.Insert("ZmbM_HermitSkinny_Beige");
+            zmbClasses.Insert("ZmbM_HermitSkinny_Black");
+            zmbClasses.Insert("ZmbM_HermitSkinny_Green");
+            zmbClasses.Insert("ZmbM_HermitSkinny_Red");
+            zmbClasses.Insert("ZmbM_HikerSkinny_Blue");
+            zmbClasses.Insert("ZmbM_HikerSkinny_Green");
+            zmbClasses.Insert("ZmbM_HikerSkinny_Yellow");
+            zmbClasses.Insert("ZmbM_HunterOld_Autumn");
+            zmbClasses.Insert("ZmbM_HunterOld_Spring");
+            zmbClasses.Insert("ZmbM_HunterOld_Summer");
+            zmbClasses.Insert("ZmbM_HunterOld_Winter");
+            zmbClasses.Insert("ZmbM_Jacket_beige");
+            zmbClasses.Insert("ZmbM_Jacket_black");
+            zmbClasses.Insert("ZmbM_Jacket_blue");
+            zmbClasses.Insert("ZmbM_Jacket_bluechecks");
+            zmbClasses.Insert("ZmbM_Jacket_brown");
+            zmbClasses.Insert("ZmbM_Jacket_greenchecks");
+            zmbClasses.Insert("ZmbM_Jacket_grey");
+            zmbClasses.Insert("ZmbM_Jacket_khaki");
+            zmbClasses.Insert("ZmbM_Jacket_magenta");
+            zmbClasses.Insert("ZmbM_Jacket_stripes");
+            zmbClasses.Insert("ZmbM_JoggerSkinny_Blue");
+            zmbClasses.Insert("ZmbM_JoggerSkinny_Green");
+            zmbClasses.Insert("ZmbM_JoggerSkinny_Red");
+            zmbClasses.Insert("ZmbM_JournalistSkinny");
+            zmbClasses.Insert("ZmbM_MechanicSkinny_Blue");
+            zmbClasses.Insert("ZmbM_MechanicSkinny_Green");
+            zmbClasses.Insert("ZmbM_MechanicSkinny_Grey");
+            zmbClasses.Insert("ZmbM_MechanicSkinny_Red");
+            zmbClasses.Insert("ZmbM_MotobikerFat_Beige");
+            zmbClasses.Insert("ZmbM_MotobikerFat_Black");
+            zmbClasses.Insert("ZmbM_MotobikerFat_Blue");
+            zmbClasses.Insert("ZmbM_OffshoreWorker_Green");
+            zmbClasses.Insert("ZmbM_OffshoreWorker_Orange");
+            zmbClasses.Insert("ZmbM_OffshoreWorker_Red");
+            zmbClasses.Insert("ZmbM_OffshoreWorker_Yellow");
+            zmbClasses.Insert("ZmbM_ParamedicNormal_Black");
+            zmbClasses.Insert("ZmbM_ParamedicNormal_Blue");
+            zmbClasses.Insert("ZmbM_ParamedicNormal_Green");
+            zmbClasses.Insert("ZmbM_ParamedicNormal_Red");
+            zmbClasses.Insert("ZmbM_PatientSkinny");
+            zmbClasses.Insert("ZmbM_PatrolNormal_Autumn");
+            zmbClasses.Insert("ZmbM_PatrolNormal_Flat");
+            zmbClasses.Insert("ZmbM_PatrolNormal_PautRev");
+            zmbClasses.Insert("ZmbM_PatrolNormal_Summer");
+            zmbClasses.Insert("ZmbM_PolicemanFat");
+            zmbClasses.Insert("ZmbM_PolicemanSpecForce");
+            zmbClasses.Insert("ZmbM_PrisonerSkinny");
+            zmbClasses.Insert("ZmbM_SkaterYoung_Blue");
+            zmbClasses.Insert("ZmbM_SkaterYoung_Brown");
+            zmbClasses.Insert("ZmbM_SkaterYoung_Green");
+            zmbClasses.Insert("ZmbM_SkaterYoung_Grey");
+            zmbClasses.Insert("ZmbM_SoldierNormal");
+            zmbClasses.Insert("ZmbM_VillagerOld_Blue");
+            zmbClasses.Insert("ZmbM_VillagerOld_Green");
+            zmbClasses.Insert("ZmbM_VillagerOld_White");
+            zmbClasses.Insert("ZmbM_priestPopSkinny");
+            zmbClasses.Insert("ZmbM_usSoldier_normal_Desert");
+            zmbClasses.Insert("ZmbM_usSoldier_normal_Woodland");
+            return zmbClasses[Math.RandomInt(0, zmbClasses.Count())];
+        }
+
+        // Anything already a full classname passes through directly
         return entityClassName;
     }
 
@@ -608,13 +1203,25 @@ class QT_QuestManager
             // Empty string means this is a dummy/recon objective — skip spawning
             if (spawnClass == "") continue;
 
-            // Pick a spawn centre 150-200m away in a random direction
-            float angle = Math.RandomFloat(0, Math.PI2);
-            float dist  = Math.RandomFloat(150, 200);
             vector spawnCenter;
-            spawnCenter[0] = playerPos[0] + Math.Sin(angle) * dist;
-            spawnCenter[2] = playerPos[2] + Math.Cos(angle) * dist;
-            spawnCenter[1] = GetGame().SurfaceY(spawnCenter[0], spawnCenter[2]);
+            if (def.killTargetSpawnPosition != vector.Zero)
+            {
+                spawnCenter = def.killTargetSpawnPosition;
+                if (spawnCenter[1] == 0)
+                    spawnCenter[1] = GetGame().SurfaceY(spawnCenter[0], spawnCenter[2]);
+            }
+            else
+            {
+                // No fixed position set - spawn 200-250m from player
+                float angle = Math.RandomFloat(0, Math.PI2);
+                float dist  = Math.RandomFloat(200, 250);
+                spawnCenter[0] = playerPos[0] + Math.Sin(angle) * dist;
+                spawnCenter[2] = playerPos[2] + Math.Cos(angle) * dist;
+                spawnCenter[1] = GetGame().SurfaceY(spawnCenter[0], spawnCenter[2]);
+            }
+
+            float spawnRadius = def.killTargetSpawnRadius;
+            if (spawnRadius <= 0) spawnRadius = 20.0;
 
             for (int i = 0; i < obj.requiredAmount; i++)
             {
@@ -623,7 +1230,7 @@ class QT_QuestManager
                 for (int attempt = 0; attempt < 5; attempt++)
                 {
                     float scatter = Math.RandomFloat(0, Math.PI2);
-                    float scatterDist = Math.RandomFloat(3, 20);
+                    float scatterDist = Math.RandomFloat(0, spawnRadius);
                     vector candidate;
                     candidate[0] = spawnCenter[0] + Math.Sin(scatter) * scatterDist;
                     candidate[2] = spawnCenter[2] + Math.Cos(scatter) * scatterDist;
@@ -643,7 +1250,7 @@ class QT_QuestManager
                     }
                 }
 
-                Object spawned = GetGame().CreateObject(spawnClass, spawnPos, false, true);
+                Object spawned = GetGame().CreateObject(ResolveSpawnClass(obj.entityClassName), spawnPos, false, true);
                 if (spawned) spawnedEntities.Insert(spawned);
             }
 
@@ -677,17 +1284,17 @@ class QT_QuestManager
         }
 
         qs.state = QT_QuestState.COMPLETED;
-        QT_PersistenceManager.SavePlayer(uid, playerMap);
+        MarkPlayerDirty(uid);
 
         if (questId == "quest_201")
         {
             SpawnHelicopterCrash("quest_201");
-            QT_RPCManager.SendToast(player, "Recon Complete! Get back to Sister Emma!", QT_ToastType.ACCEPT);
+            QT_RPCManager.SendToast(player, "#QuestTrader_QUEST_READY_TURN_IN: " + def.title, QT_ToastType.COMPLETE);
         }
         else
         {
             SpawnHelicopterCrash("quest_179");
-            QT_RPCManager.SendToast(player, "Recon Complete! Let's get back to Fisher!", QT_ToastType.ACCEPT);
+            QT_RPCManager.SendToast(player, "#QuestTrader_QUEST_READY_TURN_IN: " + def.title, QT_ToastType.COMPLETE);
         }
 
         QT_RPCManager.SendHUDUpdate(player);
@@ -840,7 +1447,7 @@ class QT_QuestManager
         auto qs = GetPlayerQuestState(uid, questId);
         if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED && qs.state != QT_QuestState.COOLDOWN)
         {
-            QT_RPCManager.SendToast(player, "No active quest to cancel.", QT_ToastType.WARNING);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_NO_ACTIVE_CANCEL", QT_ToastType.WARNING);
             return false;
         }
 
@@ -850,8 +1457,7 @@ class QT_QuestManager
         for (int ci = 0; ci < qs.objectiveProgress.Count(); ci++)
             qs.objectiveProgress.Set(ci, 0);
 
-        QT_PersistenceManager.SavePlayer(uid, GetOrCreatePlayerMap(uid));
-        QT_RPCManager.SendToast(player, "Quest cancelled.", QT_ToastType.WARNING);
+        QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_QUEST_CANCELLED", QT_ToastType.WARNING);
         QT_RPCManager.SendHUDUpdate(player);
         QT_Logger.GetInstance().Info("QUEST", "Cancelled: " + questId, uid, name);
         CleanupQuestItem(uid, questId);
@@ -860,6 +1466,8 @@ class QT_QuestManager
         QT_QuestDef def = GetQuestDef(questId);
         if (def && def.type == QT_QuestType.DELIVER)
             RemoveDeliveryItem(player, def);
+
+        MarkPlayerDirty(uid);
 
         return true;
     }
@@ -913,7 +1521,7 @@ class QT_QuestManager
         auto qs = GetPlayerQuestState(uid, questId);
         if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED)
         {
-            QT_RPCManager.SendToast(player, "You have not accepted this quest.", QT_ToastType.WARNING);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_NOT_ACCEPTED", QT_ToastType.WARNING);
             return false;
         }
 
@@ -933,7 +1541,7 @@ class QT_QuestManager
         else                qs.state = QT_QuestState.TURNED_IN;
         qs.completedTimestamp = GetGame().GetTime() / 1000;
 
-        QT_PersistenceManager.SavePlayer(uid, GetOrCreatePlayerMap(uid));
+        SavePlayerImmediate(uid, "quest reward delivered");
         if (def.rewardMessage != "")
             QT_RPCManager.SendToast(player, def.rewardMessage, QT_ToastType.REWARD);
         SendQuestCompleteNotification(player, def);
@@ -954,7 +1562,7 @@ class QT_QuestManager
         auto qs = GetPlayerQuestState(uid, questId);
         if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED)
         {
-            QT_RPCManager.SendToast(player, "You have not accepted this quest.", QT_ToastType.WARNING);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_NOT_ACCEPTED", QT_ToastType.WARNING);
             return false;
         }
 
@@ -980,7 +1588,7 @@ class QT_QuestManager
         else                qs.state = QT_QuestState.TURNED_IN;
         qs.completedTimestamp = GetGame().GetTime() / 1000;
 
-        QT_PersistenceManager.SavePlayer(uid, GetOrCreatePlayerMap(uid));
+        SavePlayerImmediate(uid, "quest reward delivered");
         if (def.rewardMessage != "")
             QT_RPCManager.SendToast(player, def.rewardMessage, QT_ToastType.REWARD);
         SendQuestCompleteNotification(player, def);
@@ -1001,12 +1609,17 @@ class QT_QuestManager
         auto qs = GetPlayerQuestState(uid, questId);
         if (qs.state != QT_QuestState.COMPLETED)
         {
-            string prog = "Incomplete:";
+            string prog = "#QuestTrader_TOAST_INCOMPLETE:";
             foreach (int i, QT_Objective obj : def.objectives)
             {
                 int cur = 0;
                 if (i < qs.objectiveProgress.Count()) cur = qs.objectiveProgress[i];
-                prog = prog + " " + obj.entityClassName + " " + cur + "/" + obj.requiredAmount;
+                prog = prog + " ";
+                prog = prog + GetObjectiveKillLabel(obj);
+                prog = prog + " ";
+                prog = prog + cur.ToString();
+                prog = prog + "/";
+                prog = prog + obj.requiredAmount.ToString();
             }
             QT_RPCManager.SendToast(player, prog, QT_ToastType.WARNING);
             return false;
@@ -1020,7 +1633,7 @@ class QT_QuestManager
         else                qs.state = QT_QuestState.TURNED_IN;
         qs.completedTimestamp = GetGame().GetTime() / 1000;
 
-        QT_PersistenceManager.SavePlayer(uid, GetOrCreatePlayerMap(uid));
+        SavePlayerImmediate(uid, "quest reward delivered");
         if (def.rewardMessage != "")
             QT_RPCManager.SendToast(player, def.rewardMessage, QT_ToastType.REWARD);
         SendQuestCompleteNotification(player, def);
@@ -1029,88 +1642,645 @@ class QT_QuestManager
         return true;
     }
 
+    bool TurnInInteractionQuest(PlayerBase player, string questId)
+    {
+        if (!player) return false;
+        string uid  = player.GetIdentity().GetId();
+        string name = player.GetIdentity().GetName();
+
+        QT_QuestDef def = GetQuestDef(questId);
+        if (!def || def.type != QT_QuestType.INTERACT) return false;
+
+        auto qs = GetPlayerQuestState(uid, questId);
+        if (qs.state != QT_QuestState.COMPLETED)
+        {
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_INTERACTION_REQUIRED", QT_ToastType.WARNING);
+            return false;
+        }
+
+        GiveRewards(player, def);
+        CleanupQuestItem(uid, questId);
+        RecordCompletion(player, def);
+
+        if (def.repeatable) qs.state = QT_QuestState.COOLDOWN;
+        else                qs.state = QT_QuestState.TURNED_IN;
+        qs.completedTimestamp = GetGame().GetTime() / 1000;
+
+        SavePlayerImmediate(uid, "quest reward delivered");
+        if (def.rewardMessage != "")
+            QT_RPCManager.SendToast(player, def.rewardMessage, QT_ToastType.REWARD);
+        SendQuestCompleteNotification(player, def);
+        QT_RPCManager.SendHUDUpdate(player);
+        QT_Logger.GetInstance().Info("QUEST", "Completed (interaction): " + def.title, uid, name);
+        return true;
+    }
+
+    bool CompleteInteractionObjective(PlayerBase player, string questId, string objectClassName, vector objectPosition)
+    {
+        if (!GetGame().IsServer()) return false;
+        if (!player || !player.GetIdentity()) return false;
+
+        string uid = player.GetIdentity().GetId();
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        if (!playerMap.Contains(questId)) return false;
+
+        QT_PlayerQuestState qs = playerMap.Get(questId);
+        if (!qs || qs.state != QT_QuestState.ACTIVE) return false;
+
+        QT_QuestDef def = GetQuestDef(questId);
+        if (!def || def.type != QT_QuestType.INTERACT) return false;
+
+        if (!IsInteractionTargetValid(player, def, objectClassName, objectPosition, null))
+        {
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_WRONG_INTERACTION_OBJECT", QT_ToastType.WARNING);
+            return false;
+        }
+
+        return CompleteInteractionQuestState(player, def, qs, playerMap);
+    }
+
+    bool CompleteInteractionObjectiveFromObject(PlayerBase player, Object targetObject)
+    {
+        if (!GetGame().IsServer()) return false;
+        if (!player || !player.GetIdentity()) return false;
+        if (!targetObject) return false;
+
+        string uid = player.GetIdentity().GetId();
+        auto playerMap = GetOrCreatePlayerMap(uid);
+        foreach (string questId, QT_PlayerQuestState qs : playerMap)
+        {
+            if (!qs || qs.state != QT_QuestState.ACTIVE) continue;
+
+            QT_QuestDef def = GetQuestDef(questId);
+            if (!def || def.type != QT_QuestType.INTERACT) continue;
+
+            if (!IsInteractionTargetValid(player, def, targetObject.GetType(), targetObject.GetPosition(), targetObject))
+                continue;
+
+            return CompleteInteractionQuestState(player, def, qs, playerMap);
+        }
+        return false;
+    }
+
+    private bool IsInteractionTargetValid(PlayerBase player, QT_QuestDef def, string objectClassName, vector objectPosition, Object directObject)
+    {
+        if (!player || !def) return false;
+
+        float allowedDist = def.interactionDistance;
+        if (allowedDist <= 0) allowedDist = 3.0;
+        allowedDist = allowedDist + 1.0;
+
+        bool validPosition = false;
+        if (def.interactionPosition != vector.Zero)
+        {
+            validPosition = vector.Distance(player.GetPosition(), def.interactionPosition) <= allowedDist;
+        }
+        else if (objectPosition != vector.Zero)
+        {
+            validPosition = vector.Distance(player.GetPosition(), objectPosition) <= allowedDist;
+        }
+        else if (directObject)
+        {
+            validPosition = vector.Distance(player.GetPosition(), directObject.GetPosition()) <= allowedDist;
+        }
+
+        bool validClass = true;
+        if (def.interactionObjectClassName != "")
+        {
+            validClass = false;
+            if (directObject)
+            {
+                string directType = directObject.GetType();
+                if (directType != "" && (directType.Contains(def.interactionObjectClassName) || GetGame().IsKindOf(directType, def.interactionObjectClassName)))
+                {
+                    if (def.interactionPosition == vector.Zero || vector.Distance(directObject.GetPosition(), def.interactionPosition) <= allowedDist)
+                        validClass = true;
+                }
+            }
+            else
+            {
+                array<Object> foundObjects = new array<Object>();
+                array<CargoBase> proxyCargos = new array<CargoBase>();
+                GetGame().GetObjectsAtPosition(player.GetPosition(), allowedDist, foundObjects, proxyCargos);
+
+                foreach (Object foundObj : foundObjects)
+                {
+                    if (!foundObj) continue;
+
+                    string foundType = foundObj.GetType();
+                    if (foundType == "") continue;
+                    if (!foundType.Contains(def.interactionObjectClassName) && !GetGame().IsKindOf(foundType, def.interactionObjectClassName)) continue;
+
+                    if (def.interactionPosition != vector.Zero && vector.Distance(foundObj.GetPosition(), def.interactionPosition) > allowedDist) continue;
+
+                    validClass = true;
+                    break;
+                }
+            }
+        }
+
+        return validPosition && validClass;
+    }
+
+    private bool CompleteInteractionQuestState(PlayerBase player, QT_QuestDef def, QT_PlayerQuestState qs, map<string, ref QT_PlayerQuestState> playerMap)
+    {
+        if (!player || !def || !qs || !playerMap) return false;
+
+        string uid = player.GetIdentity().GetId();
+        EnsureObjectiveProgress(qs, def);
+        if (qs.objectiveProgress.Count() > 0)
+            qs.objectiveProgress.Set(0, 1);
+
+        qs.state = QT_QuestState.COMPLETED;
+        MarkPlayerDirty(uid);
+        QT_RPCManager.SendToast(player, "#QuestTrader_QUEST_READY_TURN_IN: " + def.title, QT_ToastType.COMPLETE);
+        QT_RPCManager.SendHUDUpdate(player);
+        QT_Logger.GetInstance().Info("QUEST", "Interaction objective completed: " + def.title, uid, player.GetIdentity().GetName());
+        return true;
+    }
+
+    private bool IsKillDebugEnabled()
+    {
+        if (!m_config || !m_config.Settings) return false;
+        return m_config.Settings.EnableKillDebug;
+    }
+
+    private void KillDebug(string msg, PlayerBase player = null)
+    {
+        if (!IsKillDebugEnabled()) return;
+
+        string uid = "";
+        string name = "";
+        if (player && player.GetIdentity())
+        {
+            uid = player.GetIdentity().GetId();
+            name = player.GetIdentity().GetName();
+        }
+
+        QT_Logger.GetInstance().Debug("KILL", msg, uid, name);
+    }
+
+    private string BoolText(bool value)
+    {
+        if (value) return "TRUE";
+        return "FALSE";
+    }
+
+    private void AddKillTargetCandidate(array<string> targets, string target)
+    {
+        if (!targets) return;
+
+        target = target.Trim();
+        if (target == "") return;
+
+        foreach (string existing : targets)
+        {
+            if (existing == target) return;
+        }
+
+        targets.Insert(target);
+    }
+
+    private void ExpandKillTarget(array<string> targets, string target)
+    {
+        target = target.Trim();
+        if (target == "") return;
+
+        AddKillTargetCandidate(targets, target);
+
+        if (target == "Deer" && m_itemSettings && m_itemSettings.DeerKillAliases)
+        {
+            foreach (string deerAlias : m_itemSettings.DeerKillAliases)
+                AddKillTargetCandidate(targets, deerAlias);
+        }
+
+        if (m_itemSettings && m_itemSettings.KillTargetGroups && m_itemSettings.KillTargetGroups.Contains(target))
+        {
+            array<string> groupTargets = m_itemSettings.KillTargetGroups.Get(target);
+            if (groupTargets)
+            {
+                foreach (string groupTarget : groupTargets)
+                    AddKillTargetCandidate(targets, groupTarget);
+            }
+        }
+        else if (m_itemSettings && m_itemSettings.KillTargetGroups)
+        {
+            string targetLower = target;
+            targetLower.ToLower();
+            foreach (string groupName, array<string> fallbackGroupTargets : m_itemSettings.KillTargetGroups)
+            {
+                string groupLower = groupName;
+                groupLower.ToLower();
+                if (groupLower != targetLower) continue;
+
+                if (fallbackGroupTargets)
+                {
+                    foreach (string fallbackGroupTarget : fallbackGroupTargets)
+                        AddKillTargetCandidate(targets, fallbackGroupTarget);
+                }
+                break;
+            }
+        }
+    }
+
+    private void BuildObjectiveKillTargets(QT_Objective obj, array<string> targets)
+    {
+        if (!obj || !targets) return;
+
+        if (obj.entityClassName != "")
+            ExpandKillTarget(targets, obj.entityClassName);
+
+        if (obj.Targets)
+        {
+            foreach (string target : obj.Targets)
+                ExpandKillTarget(targets, target);
+        }
+    }
+
+    private string GetObjectiveKillLabel(QT_Objective obj)
+    {
+        if (!obj) return "";
+        if (obj.entityClassName != "") return obj.entityClassName;
+        if (obj.Targets && obj.Targets.Count() > 0) return obj.Targets[0];
+        return "";
+    }
+
+    private string BuildVictimClassSignature(EntityAI victim)
+    {
+        if (!victim) return "";
+
+        string signature = "";
+        EntityAI ent = victim;
+        int depth = 0;
+        while (ent && depth < 8)
+        {
+            string typeName = ent.GetType();
+            if (typeName != "")
+            {
+                if (signature != "") signature = signature + ">";
+                signature = signature + typeName;
+            }
+
+            EntityAI parent = EntityAI.Cast(ent.GetHierarchyParent());
+            if (!parent || parent == ent) break;
+            ent = parent;
+            depth++;
+        }
+
+        return signature;
+    }
+
+    private bool KnownBaseMatches(EntityAI victim, string targetLower)
+    {
+        if (!victim) return false;
+
+        if (targetLower == "object" || targetLower == "entity" || targetLower == "entityai")
+            return true;
+
+        if (targetLower == "zombiebase")
+        {
+            if (victim.IsInherited(ZombieBase)) return true;
+            if (ZombieBase.Cast(victim)) return true;
+        }
+
+        if (targetLower == "animalbase")
+        {
+            if (victim.IsInherited(AnimalBase)) return true;
+            if (AnimalBase.Cast(victim)) return true;
+        }
+
+        if (targetLower == "itembase")
+        {
+            if (victim.IsInherited(ItemBase)) return true;
+            if (ItemBase.Cast(victim)) return true;
+        }
+
+        if (targetLower == "buildingbase")
+        {
+            if (victim.IsInherited(BuildingBase)) return true;
+            if (BuildingBase.Cast(victim)) return true;
+        }
+
+        if (targetLower == "house")
+        {
+            if (victim.IsInherited(House)) return true;
+            if (House.Cast(victim)) return true;
+        }
+
+        if (targetLower == "carscript")
+        {
+            if (victim.IsInherited(CarScript)) return true;
+            if (CarScript.Cast(victim)) return true;
+        }
+
+        if (targetLower == "boatscript")
+        {
+            if (victim.IsInherited(BoatScript)) return true;
+            if (BoatScript.Cast(victim)) return true;
+        }
+
+        if (targetLower == "transport")
+        {
+            if (victim.IsInherited(Transport)) return true;
+            if (Transport.Cast(victim)) return true;
+        }
+
+        if (targetLower == "playerbase")
+        {
+            if (victim.IsInherited(PlayerBase)) return true;
+            if (PlayerBase.Cast(victim)) return true;
+        }
+
+        if (targetLower == "manbase")
+        {
+            if (victim.IsInherited(ManBase)) return true;
+            if (ManBase.Cast(victim)) return true;
+        }
+
+        return false;
+    }
+
+    private bool ClassNameMatchesTarget(string className, string target)
+    {
+        if (className == "" || target == "") return false;
+
+        if (className == target) return true;
+        if (GetGame().IsKindOf(className, target)) return true;
+
+        string classLower = className;
+        classLower.ToLower();
+        string targetLower = target;
+        targetLower.ToLower();
+
+        if (classLower == targetLower) return true;
+        if (classLower.Contains(targetLower)) return true;
+
+        return false;
+    }
+
+    private bool DoesVictimInherit(EntityAI victim, string target)
+    {
+        if (!victim || target == "") return false;
+
+        string targetLower = target;
+        targetLower.ToLower();
+        if (KnownBaseMatches(victim, targetLower)) return true;
+
+        if (victim.IsKindOf(target)) return true;
+        if (GetGame().IsKindOf(victim.GetType(), target)) return true;
+
+        return false;
+    }
+
+    private bool KillTargetMatches(EntityAI victim, string target)
+    {
+        if (!victim) return false;
+        target = target.Trim();
+        if (target == "") return false;
+
+        string signature = BuildVictimClassSignature(victim);
+        string cacheKey = signature + "|" + target;
+        if (m_killMatchCache.Contains(cacheKey))
+            return m_killMatchCache.Get(cacheKey);
+
+        string targetLower = target;
+        targetLower.ToLower();
+
+        bool matched = false;
+        if (KnownBaseMatches(victim, targetLower))
+        {
+            matched = true;
+        }
+        else if (DoesVictimInherit(victim, target))
+        {
+            matched = true;
+        }
+        else
+        {
+            EntityAI ent = victim;
+            int depth = 0;
+            while (ent && depth < 8)
+            {
+                if (ClassNameMatchesTarget(ent.GetType(), target))
+                {
+                    matched = true;
+                    break;
+                }
+
+                EntityAI parent = EntityAI.Cast(ent.GetHierarchyParent());
+                if (!parent || parent == ent) break;
+                ent = parent;
+                depth++;
+            }
+        }
+
+        if (m_killMatchCache.Count() > 2048)
+            m_killMatchCache.Clear();
+        m_killMatchCache.Insert(cacheKey, matched);
+        return matched;
+    }
+
+    private bool ObjectiveMatchesKilledEntity(EntityAI victim, QT_Objective obj)
+    {
+        if (!victim || !obj) return false;
+        if (obj.entityClassName == "QT_ReconObjective") return false;
+
+        array<string> targets = new array<string>();
+        BuildObjectiveKillTargets(obj, targets);
+        if (targets.Count() == 0) return false;
+
+        bool classMatched = false;
+        foreach (string target : targets)
+        {
+            if (KillTargetMatches(victim, target))
+            {
+                classMatched = true;
+                break;
+            }
+        }
+
+        if (!classMatched) return false;
+
+        // --------------------------------------------------------
+        //  Verificação de alvo nomeado específico (specificTargetName).
+        //  Quando definido na quest, apenas entidades com esse nome
+        //  (GetDisplayName ou m_qtTargetName) contam para o objetivo.
+        //  Exemplo de uso no QuestConfig.json:
+        //    "specificTargetName": "Coronel Rashid"
+        // --------------------------------------------------------
+        if (obj.specificTargetName != "")
+        {
+            string victimDisplay = victim.GetDisplayName();
+            string targetNameLower = obj.specificTargetName;
+            targetNameLower.ToLower();
+            string victimDisplayLower = victimDisplay;
+            victimDisplayLower.ToLower();
+
+            // Também tenta GetType para NPCs que usam nome como classname
+            string victimType = victim.GetType();
+            string victimTypeLower = victimType;
+            victimTypeLower.ToLower();
+
+            bool nameMatchedByDisplay = (victimDisplayLower != "" && victimDisplayLower.Contains(targetNameLower));
+            bool nameMatchedByType    = (victimTypeLower != "" && victimTypeLower.Contains(targetNameLower));
+            bool nameMatched = nameMatchedByDisplay || nameMatchedByType;
+
+            if (!nameMatched) return false;
+        }
+
+        return true;
+    }
+
+    // ============================================================
+    //  Métodos públicos chamados por QT_KillHelper (QT_KillHooks.c).
+    //  Estado de attacker por entity é indexado pelo EntityLowId (int).
+    //  Armazenamos o UID do jogador (string) em vez do ponteiro ao
+    //  PlayerBase para evitar referências inválidas após desconexão.
+    // ============================================================
+
+    // Chamado em EEHitBy: registra quem acertou a entidade.
+    void QT_StoreAttackerUID(EntityAI victim, string attackerUID)
+    {
+        if (!victim || attackerUID == "") return;
+        int id = victim.GetID();
+        m_qt_lastAttackerUID.Set(id, attackerUID);
+        m_qt_lastHitTime.Set(id, GetGame().GetTime() / 1000);
+    }
+
+    // Chamado em EEKilled: devolve o PlayerBase do último atacante
+    // dentro da janela de bleed-out, se ainda estiver online.
+    PlayerBase QT_ResolveStoredAttacker(EntityAI victim, int now, int expirySeconds)
+    {
+        if (!victim) return null;
+        int id = victim.GetID();
+        if (!m_qt_lastAttackerUID.Contains(id)) return null;
+        if (!m_qt_lastHitTime.Contains(id)) return null;
+        int hitTime = m_qt_lastHitTime.Get(id);
+        if ((now - hitTime) > expirySeconds) return null;
+        string uid = m_qt_lastAttackerUID.Get(id);
+        return FindOnlinePlayer(uid);
+    }
+
+    bool QT_IsRecentlyKillCredited(EntityAI victim, int now, int dedupWindow)
+    {
+        if (!victim) return false;
+        int id = victim.GetID();
+        if (!m_qt_creditedKillTime.Contains(id)) return false;
+        return (now - m_qt_creditedKillTime.Get(id)) < dedupWindow;
+    }
+
+    void QT_MarkKillCredited(EntityAI victim, int now)
+    {
+        if (!victim) return;
+        m_qt_creditedKillTime.Set(victim.GetID(), now);
+    }
+
     void OnEntityKilled(EntityAI victim, PlayerBase killerPlayer)
     {
         if (!GetGame().IsServer()) return;
         if (!m_config) return;
-        Print("[QuestTrader] OnEntityKilled: " + victim.GetType() + " killed by " + killerPlayer.GetIdentity().GetName());
-        if (!killerPlayer) return;
-
+        if (!victim || !killerPlayer || !killerPlayer.GetIdentity()) return;
         string uid = killerPlayer.GetIdentity().GetId();
         string victimClass = victim.GetType();
         auto playerMap = GetOrCreatePlayerMap(uid);
         bool anyChange = false;
+        bool killDebugEnabled = IsKillDebugEnabled();
+        if (killDebugEnabled)
+        {
+            KillDebug("Entity killed detected", killerPlayer);
+            KillDebug("Victim classname: " + victimClass, killerPlayer);
+            KillDebug("Victim inherited from ZombieBase: " + BoolText(DoesVictimInherit(victim, "ZombieBase")), killerPlayer);
+            KillDebug("Victim inherited from AnimalBase: " + BoolText(DoesVictimInherit(victim, "AnimalBase")), killerPlayer);
+            KillDebug("Victim inherited from ItemBase: " + BoolText(DoesVictimInherit(victim, "ItemBase")), killerPlayer);
+            KillDebug("Victim inherited from BuildingBase: " + BoolText(DoesVictimInherit(victim, "BuildingBase")), killerPlayer);
+            KillDebug("Victim inherited from CarScript: " + BoolText(DoesVictimInherit(victim, "CarScript")), killerPlayer);
+            KillDebug("Victim inherited from BoatScript: " + BoolText(DoesVictimInherit(victim, "BoatScript")), killerPlayer);
+            KillDebug("Killer: " + killerPlayer.GetIdentity().GetName(), killerPlayer);
+        }
 
         foreach (string questId, ref QT_PlayerQuestState qs : playerMap)
         {
-            if (qs.state != QT_QuestState.ACTIVE) continue;
+            if (!qs || qs.state != QT_QuestState.ACTIVE) continue;
             QT_QuestDef def = GetQuestDef(questId);
             if (!def || def.type != QT_QuestType.KILL) continue;
 
+            EnsureObjectiveProgress(qs, def);
+            bool questChanged = false;
+
             foreach (int idx, QT_Objective obj : def.objectives)
             {
-                if (obj.entityClassName == "") continue;
-                if (obj.entityClassName == "QT_ReconObjective") continue;
+                if (!obj) continue;
+                if (idx >= qs.objectiveProgress.Count()) continue;
 
-                // Check if this kill matches the objective
-                bool matched = false;
-                if (obj.entityClassName == "Deer" && m_itemSettings)
-                {
-                    // Any deer variant counts
-                    foreach (string alias : m_itemSettings.DeerKillAliases)
-                    {
-                        if (victimClass.Contains(alias)) { matched = true; break; }
-                    }
-                }
-                else
-                {
-                    matched = victimClass.Contains(obj.entityClassName);
-                }
-
+                bool matched = ObjectiveMatchesKilledEntity(victim, obj);
+                if (killDebugEnabled)
+                    KillDebug("Quest '" + def.id + "' objective '" + obj.entityClassName + "' matched: " + BoolText(matched), killerPlayer);
                 if (!matched) continue;
+
                 int cur = qs.objectiveProgress[idx];
                 if (cur >= obj.requiredAmount) continue;
                 qs.objectiveProgress.Set(idx, cur + 1);
                 anyChange = true;
+                questChanged = true;
+
+                if (killDebugEnabled)
+                    KillDebug("Quest progress updated: " + def.id + " " + (cur + 1).ToString() + "/" + obj.requiredAmount.ToString(), killerPlayer);
+
                 if (m_config.Settings.notifyOnKillProgress)
                 {
-                    QT_RPCManager.SendToast(killerPlayer, "[" + def.title + "] " + obj.entityClassName + " " + (cur + 1) + "/" + obj.requiredAmount, QT_ToastType.PROGRESS);
-                    // Also send to chat so it's visible
-                    string progressMsg = "[Quest Progress] " + def.title + ": Kills " + (cur + 1) + "/" + obj.requiredAmount;
-                    GetGame().RPCSingleParam(killerPlayer, ERPCs.RPC_USER_ACTION_MESSAGE,
-                        new Param1<string>(progressMsg), true, killerPlayer.GetIdentity());
+                    string toastMsg = "[" + def.title + "]";
+                    toastMsg = toastMsg + " ";
+                    toastMsg = toastMsg + GetObjectiveKillLabel(obj);
+                    toastMsg = toastMsg + " ";
+                    toastMsg = toastMsg + (cur + 1).ToString();
+                    toastMsg = toastMsg + "/";
+                    toastMsg = toastMsg + obj.requiredAmount.ToString();
+                    QT_RPCManager.SendToast(killerPlayer, toastMsg, QT_ToastType.PROGRESS);
                 }
             }
 
-            if (anyChange && CheckKillQuestComplete(qs, def))
+            if (questChanged && CheckKillQuestComplete(qs, def))
             {
                 qs.state = QT_QuestState.COMPLETED;
-                QT_RPCManager.SendToast(killerPlayer, "Quest complete! Return to trader: " + def.title, QT_ToastType.REWARD);
-                // Also send chat message so it's hard to miss
-                string completeMsg = "[Quest Complete] " + def.title + " - Return to the Quest Trader to claim your reward!";
-                GetGame().RPCSingleParam(killerPlayer, ERPCs.RPC_USER_ACTION_MESSAGE,
-                    new Param1<string>(completeMsg), true, killerPlayer.GetIdentity());
+                QT_RPCManager.SendToast(killerPlayer, "#QuestTrader_QUEST_READY_TURN_IN: " + def.title, QT_ToastType.COMPLETE);
+                if (killDebugEnabled)
+                    KillDebug("Quest completed: " + def.id, killerPlayer);
             }
         }
 
         if (anyChange)
         {
-            QT_PersistenceManager.SavePlayer(uid, playerMap);
+            MarkPlayerDirty(uid);
             QT_RPCManager.SendHUDUpdate(killerPlayer);
         }
     }
 
-    void AdminResetQuest(string uid, string input)
+    void AdminResetQuest(string uid, string questInput)
     {
-        QT_QuestDef def = ResolveQuestForAdmin(uid, input);
-        if (!def)
-        {
-            QT_Logger.GetInstance().Warn("ADMIN", "AdminResetQuest: could not resolve quest from input: '" + input + "' for " + uid);
-            return;
-        }
         auto playerMap = GetOrCreatePlayerMap(uid);
-        if (playerMap.Contains(def.id)) playerMap.Remove(def.id);
-        QT_PersistenceManager.SavePlayer(uid, playerMap);
+        questInput = questInput.Trim();
+        if (questInput == "")
+        {
+            playerMap.Clear();
+            QT_QuestHistory.GetInstance().DeleteHistory(uid);
+        }
+        else
+        {
+            QT_QuestDef def = ResolveQuestForAdmin(uid, questInput);
+            if (!def)
+            {
+                QT_Logger.GetInstance().Warn("ADMIN", "AdminResetQuest: could not resolve quest from input: '" + questInput + "' for " + uid);
+                return;
+            }
+            string questId = def.id;
+            if (playerMap.Contains(questId)) playerMap.Remove(questId);
+            QT_QuestHistory.GetInstance().DeleteQuestHistory(uid, questId);
+        }
+        SavePlayerImmediate(uid, "admin reset");
+
+        PlayerBase player = FindOnlinePlayer(uid);
+        if (player)
+            QT_RPCManager.SendHUDUpdate(player);
     }
 
     // Store last known nearby trader per player for F-key interaction
@@ -1131,39 +2301,50 @@ class QT_QuestManager
     {
         if (m_playerStates.Contains(uid)) m_playerStates.Remove(uid);
         QT_PersistenceManager.DeletePlayer(uid);
+        QT_QuestHistory.GetInstance().DeleteHistory(uid);
+        if (m_DirtyPlayers.Contains(uid)) m_DirtyPlayers.Set(uid, false);
+        RemoveFromSaveQueue(uid);
 
-        // Push a cleared HUD update to the wiped player if they are online
-        array<Man> players = new array<Man>();
-        GetGame().GetPlayers(players);
-        foreach (Man man : players)
+        PlayerBase player = FindOnlinePlayer(uid);
+        if (player)
         {
-            PlayerBase pb = PlayerBase.Cast(man);
-            if (!pb || !pb.GetIdentity()) continue;
-            if (pb.GetIdentity().GetId() == uid)
-            {
-                QT_RPCManager.SendHUDUpdate(pb);
-                QT_RPCManager.SendToast(pb, "Your quests have been reset by an admin.", QT_ToastType.WARNING);
-                break;
-            }
+            m_playerStates.Insert(uid, new map<string, ref QT_PlayerQuestState>());
+            QT_RPCManager.SendHUDUpdate(player);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_ADMIN_WIPED_PLAYER", QT_ToastType.WARNING);
         }
     }
 
-    // Admin force-completes a player's active quest, giving rewards
-    void AdminCompleteQuest(string uid, string input)
+    bool AdminCompleteQuest(string uid, string questInput)
     {
         auto playerMap = GetOrCreatePlayerMap(uid);
-        QT_QuestDef def = ResolveQuestForAdmin(uid, input);
+        QT_QuestDef def = ResolveQuestForAdmin(uid, questInput);
         if (!def)
         {
-            QT_Logger.GetInstance().Warn("ADMIN", "AdminCompleteQuest: could not resolve quest from input: '" + input + "' for " + uid);
-            return;
+            QT_Logger.GetInstance().Warn("ADMIN", "AdminCompleteQuest: could not resolve quest from input: '" + questInput + "' for " + uid);
+            return false;
         }
+
         string questId = def.id;
+        QT_PlayerQuestState qs;
+        if (playerMap.Contains(questId))
+            qs = playerMap.Get(questId);
+        else
+        {
+            qs = new QT_PlayerQuestState();
+            qs.questId = questId;
+            qs.state = QT_QuestState.ACTIVE;
+            playerMap.Insert(questId, qs);
+        }
 
-        auto qs = GetPlayerQuestState(uid, questId);
-        if (qs.state != QT_QuestState.ACTIVE && qs.state != QT_QuestState.COMPLETED) return;
+        if (!qs) return false;
+        if (qs.state == QT_QuestState.TURNED_IN || qs.state == QT_QuestState.COOLDOWN)
+        {
+            QT_Logger.GetInstance().Warn("ADMIN", "AdminCompleteQuest: quest already finished: " + questId + " for " + uid);
+            return false;
+        }
 
-        // Mark all kill objectives as complete so state resolves correctly
+        qs.questId = questId;
+
         for (int i = 0; i < def.objectives.Count(); i++)
         {
             while (qs.objectiveProgress.Count() <= i)
@@ -1171,30 +2352,19 @@ class QT_QuestManager
             qs.objectiveProgress.Set(i, def.objectives[i].requiredAmount);
         }
 
-        // Find the online player to give rewards; skip reward if offline
-        array<Man> players = new array<Man>();
-        GetGame().GetPlayers(players);
-        PlayerBase target = null;
-        foreach (Man man : players)
+        PlayerBase player = FindOnlinePlayer(uid);
+        if (player)
         {
-            PlayerBase pb = PlayerBase.Cast(man);
-            if (!pb || !pb.GetIdentity()) continue;
-            if (pb.GetIdentity().GetId() == uid) { target = pb; break; }
-        }
-
-        if (target)
-        {
-            GiveRewards(target, def);
-            RecordCompletion(target, def);
+            GiveRewards(player, def);
+            RecordCompletion(player, def);
             if (def.rewardMessage != "")
-                QT_RPCManager.SendToast(target, def.rewardMessage, QT_ToastType.REWARD);
-            QT_RPCManager.SendToast(target, "A quest has been completed for you by an admin.", QT_ToastType.INFO);
+                QT_RPCManager.SendToast(player, def.rewardMessage, QT_ToastType.REWARD);
+            SendQuestCompleteNotification(player, def);
+            QT_RPCManager.SendToast(player, "#QuestTrader_TOAST_ADMIN_COMPLETED_FOR_YOU", QT_ToastType.INFO);
         }
         else
         {
-            // Player is offline — record completion without giving rewards
-            string emptyName = uid;
-            QT_QuestHistory.GetInstance().RecordCompletion(uid, emptyName, def, GetGame().GetTime() / 1000);
+            QT_QuestHistory.GetInstance().RecordCompletion(uid, uid, def, GetGame().GetTime() / 1000);
         }
 
         CleanupQuestItem(uid, questId);
@@ -1203,9 +2373,32 @@ class QT_QuestManager
         else                qs.state = QT_QuestState.TURNED_IN;
         qs.completedTimestamp = GetGame().GetTime() / 1000;
 
-        QT_PersistenceManager.SavePlayer(uid, playerMap);
+        SavePlayerImmediate(uid, "admin complete");
+        if (player) QT_RPCManager.SendHUDUpdate(player);
+        return true;
+    }
 
-        if (target) QT_RPCManager.SendHUDUpdate(target);
+    private PlayerBase FindOnlinePlayer(string uid)
+    {
+        return FindOnlinePlayerObject(uid, uid);
+    }
+
+    private PlayerBase FindOnlinePlayerObject(string uid, string steamId = "")
+    {
+        array<Man> players = new array<Man>();
+        GetGame().GetPlayers(players);
+        foreach (Man man : players)
+        {
+            PlayerBase pb = PlayerBase.Cast(man);
+            if (!pb || !pb.GetIdentity()) continue;
+            if (pb.GetIdentity().GetId() == uid)
+                return pb;
+            if (steamId != "" && pb.GetIdentity().GetPlainId() == steamId)
+                return pb;
+            if (pb.GetIdentity().GetPlainId() == uid)
+                return pb;
+        }
+        return null;
     }
 
     private void RecordCompletion(PlayerBase player, QT_QuestDef def)
@@ -1317,12 +2510,18 @@ class QT_QuestManager
             if (rewardStr != "") rewardStr = rewardStr + ", ";
             rewardStr = rewardStr + rew.amount.ToString() + "x " + QT_RPCManager.GetDisplayName(rew.itemClassName);
         }
-        string line1 = "*** QUEST COMPLETE: " + def.title + " ***";
-        string line2 = "Rewards: " + rewardStr;
-        GetGame().RPCSingleParam(player, ERPCs.RPC_USER_ACTION_MESSAGE,
-            new Param1<string>(line1), true, player.GetIdentity());
-        GetGame().RPCSingleParam(player, ERPCs.RPC_USER_ACTION_MESSAGE,
-            new Param1<string>(line2), true, player.GetIdentity());
+        string line1 = "#QuestTrader_CHAT_QUEST_COMPLETE: " + def.title;
+        string line2 = "#QuestTrader_CHAT_REWARDS: " + rewardStr;
+        QT_RPCManager.SendChatLine(player, line1);
+        QT_RPCManager.SendChatLine(player, line2);
+        if (ShouldPlaySuccessSound())
+            QT_RPCManager.SendSuccessSound(player);
+    }
+
+    private bool ShouldPlaySuccessSound()
+    {
+        if (!m_config || !m_config.Settings) return true;
+        return m_config.Settings.ActivateSucessSound;
     }
 
     private bool IsStackableReward(string className)
@@ -1386,6 +2585,6 @@ class QT_QuestManager
     static void QT_Notify(PlayerBase player, string msg)
     {
         if (!player || !player.GetIdentity()) return;
-        GetGame().RPCSingleParam(player, ERPCs.RPC_USER_ACTION_MESSAGE, new Param1<string>("[Trader] " + msg), true, player.GetIdentity());
+        QT_RPCManager.SendChatLine(player, "#QuestTrader_CHAT_TRADER " + msg);
     }
 }

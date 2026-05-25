@@ -7,6 +7,6 @@ type ModInfo: Managed
     string version = "1.0.0";
     string description = "Adds interactive Trader NPCs with configurable quests (collect items, kill animals. Deliver items).";
     string author = "Taco Donkey";
-    string credits = "";
+    string credits = "JhonWinchester";
     string website = "";
 }

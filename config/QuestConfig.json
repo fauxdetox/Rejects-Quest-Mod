@@ -127,7 +127,7 @@
       "id": "quest_001",
       "traderId": "trader_003",
       "title": "Clinic Supplies",
-      "description": "My clinic runs on faith and very little else. I have been treating infected wounds with whatever comes through the door \u2014 boiled water, improvised bandages, prayers that seem to work about as often as anything else. The tetracycline ran out four days ago. I am not panicking. I have buried enough people to know that panic does not help, but I am asking urgently.",
+      "description": "My clinic runs on faith and very little else. I have been treating infected wounds with whatever comes through the door — boiled water, improvised bandages, prayers that seem to work about as often as anything else. The tetracycline ran out four days ago. I am not panicking. I have buried enough people to know that panic does not help, but I am asking urgently.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -165,7 +165,7 @@
       "id": "quest_002",
       "traderId": "trader_003",
       "title": "Long Hunt",
-      "description": "I feed anyone who comes to the church. Right now that is eleven people, and the canned food is nearly gone. I am not a hunter \u2014 I was a field medic, not a soldier \u2014 but I know deer are in the forest east of Kabanino because I can hear them at night. I am asking for help with a directness that suggests I have already asked everyone in the church and been refused.",
+      "description": "I feed anyone who comes to the church. Right now that is eleven people, and the canned food is nearly gone. I am not a hunter — I was a field medic, not a soldier — but I know deer are in the forest east of Kabanino because I can hear them at night. I am asking for help with a directness that suggests I have already asked everyone in the church and been refused.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 12,
@@ -192,13 +192,14 @@
       ],
       "rewardMessage": "Eleven people ate tonight who were not sure they would. Thank you.",
       "acceptMessage": "Two deer. The forest east of the village. There is a clearing where they graze at dusk. I have watched from the church tower.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_003",
       "traderId": "trader_003",
       "title": "Wolves",
-      "description": "I do not ask for violence lightly. I have spent two years trying to save lives, not end them. But the wolf pack moving through the woods north of Kabanino has attacked two of her scouts in the last week, and one of them \u2014 a young man named Pavel \u2014 is going to lose two fingers from the frostbite and the wound combined. I am asking now because I was waiting to see if the wolves would move on. They did not.",
+      "description": "I do not ask for violence lightly. I have spent two years trying to save lives, not end them. But the wolf pack moving through the woods north of Kabanino has attacked two of her scouts in the last week, and one of them — a young man named Pavel — is going to lose two fingers from the frostbite and the wound combined. I am asking now because I was waiting to see if the wolves would move on. They did not.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 24,
@@ -221,13 +222,14 @@
       ],
       "rewardMessage": "Pavel will keep his fingers. The forest is quiet. I lit a candle for the wolves too. I know that sounds strange.",
       "acceptMessage": "The pack runs north of the village. Five wolves, possibly six. I need them gone, not scattered. If they scatter they come back.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_004",
       "traderId": "trader_003",
       "title": "Eradicate",
-      "description": "The wolf situation has worsened. The pack is larger than I thought \u2014 I can count at least twelve from the church tower on a clear night. Three more scouts have been turned back. A child wandered out of the church last week and was found an hour later, unharmed, standing very still while three wolves circled her. I am shaking as she describes this. She wants them gone.",
+      "description": "The wolf situation has worsened. The pack is larger than I thought — I can count at least twelve from the church tower on a clear night. Three more scouts have been turned back. A child wandered out of the church last week and was found an hour later, unharmed, standing very still while three wolves circled her. I am shaking as she describes this. She wants them gone.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -252,13 +254,14 @@
       "acceptMessage": "All of them. Twenty if there are twenty. The children cannot leave the church while the pack is this close.",
       "prerequisiteQuestIds": [
         "quest_002"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_005",
       "traderId": "trader_003",
       "title": "Weapons for the Camp",
-      "description": "I do not like weapons. I have made peace with the necessity of them. Several survivors at the church have no way to defend themselves and I have been treating the wounded long enough to know that being unarmed in the current world is a death sentence I am not willing to write for my people. I need rifles \u2014 functional, reliable, and I am asking with more difficulty than anything else I have asked for.",
+      "description": "I do not like weapons. I have made peace with the necessity of them. Several survivors at the church have no way to defend themselves and I have been treating the wounded long enough to know that being unarmed in the current world is a death sentence I am not willing to write for my people. I need rifles — functional, reliable, and I am asking with more difficulty than anything else I have asked for.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -366,7 +369,7 @@
       "id": "quest_009",
       "traderId": "trader_002",
       "title": "Lost Hooks",
-      "description": "I did not plan to need fishing hooks. She planned for almost everything else \u2014 radio equipment, medical supplies, weapon components \u2014 but overlooked the simple reality that fish are easier to catch than deer. Her hooks went over the cliff with a piece of equipment I was testing. I need them replaced before she mentions this to Fisher.",
+      "description": "I did not plan to need fishing hooks. She planned for almost everything else — radio equipment, medical supplies, weapon components — but overlooked the simple reality that fish are easier to catch than deer. Her hooks went over the cliff with a piece of equipment I was testing. I need them replaced before she mentions this to Fisher.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -400,7 +403,7 @@
       "id": "quest_010",
       "traderId": "trader_001",
       "title": "Lean Times",
-      "description": "My runners have been living on half rations for a week. The convoys from the south stopped coming and the camp stores are almost gone. He needs non-perishables \u2014 anything that keeps.",
+      "description": "My runners have been living on half rations for a week. The convoys from the south stopped coming and the camp stores are almost gone. He needs non-perishables — anything that keeps.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 12,
@@ -457,7 +460,8 @@
       ],
       "rewardMessage": "The route is open. That route is worth more than any gun right now.",
       "acceptMessage": "Twenty infected between the junction and the forest line. Clear them and my runners can move again.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_012",
@@ -490,7 +494,7 @@
         }
       ],
       "rewardMessage": "Still sealed. Good. You didn't open it. I respect that.",
-      "acceptMessage": "A portable radio \u2014 small, black, military issue. Someone dropped it near Novo. Find it before someone else does.",
+      "acceptMessage": "A portable radio — small, black, military issue. Someone dropped it near Novo. Find it before someone else does.",
       "prerequisiteQuestIds": [
         "quest_006"
       ]
@@ -530,7 +534,7 @@
       "id": "quest_014",
       "traderId": "trader_001",
       "title": "Hungry Camp",
-      "description": "I don't ask for charity. He calculates value. Right now, boar meat trades at four times the value of canned goods in my network \u2014 lighter to carry, higher calorie density. He needs three boars taken near the eastern forest before a rival camp finds them first.",
+      "description": "I don't ask for charity. He calculates value. Right now, boar meat trades at four times the value of canned goods in my network — lighter to carry, higher calorie density. He needs three boars taken near the eastern forest before a rival camp finds them first.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -557,13 +561,14 @@
       ],
       "rewardMessage": "Good timing. We will eat tonight instead of trading for the right to eat tomorrow.",
       "acceptMessage": "Three boars, eastern treeline. There is a sounder that moves through at dusk. Efficient.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_015",
       "traderId": "trader_003",
       "title": "God's Medicine",
-      "description": "The tetracycline is gone again. I do not complain about this \u2014 she catalogues it, adjusts, adapts, and asks again. I have been to thirty-seven funerals since the outbreak and she tracks the number because I believe the dead deserve to be counted. I will not attend a thirty-eighth if I can avoid it.",
+      "description": "The tetracycline is gone again. I do not complain about this — she catalogues it, adjusts, adapts, and asks again. I have been to thirty-seven funerals since the outbreak and she tracks the number because I believe the dead deserve to be counted. I will not attend a thirty-eighth if I can avoid it.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -597,7 +602,7 @@
       "id": "quest_016",
       "traderId": "trader_003",
       "title": "The Missing",
-      "description": "A young survivor named Marta went into the forest three days ago to gather mushrooms and did not come back. I organised a search. The searchers came back without Marta and two of them are treating wolf bites. I believe Marta is still alive \u2014 I am practical enough to know the alternative \u2014 but the window is closing and I will not stop asking.",
+      "description": "A young survivor named Marta went into the forest three days ago to gather mushrooms and did not come back. I organised a search. The searchers came back without Marta and two of them are treating wolf bites. I believe Marta is still alive — I am practical enough to know the alternative — but the window is closing and I will not stop asking.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -626,13 +631,14 @@
       "acceptMessage": "Clear the wolves from the north path and call out for Marta. I will answer if I can hear you. I am nineteen and I am brave.",
       "prerequisiteQuestIds": [
         "quest_003"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_017",
       "traderId": "trader_003",
       "title": "Holy Water",
-      "description": "I use clean water for three things: drinking, wound cleaning, and what she calls the sacraments \u2014 the small rituals of the church that I have maintained because I believe, practically, that ritual gives people something to hold onto. The well near the church has been contaminated since a dead cow fell in it two weeks ago. I need purified water until the well can be cleared.",
+      "description": "I use clean water for three things: drinking, wound cleaning, and what she calls the sacraments — the small rituals of the church that I have maintained because I believe, practically, that ritual gives people something to hold onto. The well near the church has been contaminated since a dead cow fell in it two weeks ago. I need purified water until the well can be cleared.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 6,
@@ -658,14 +664,14 @@
         }
       ],
       "rewardMessage": "The wounds are cleaner. Three people showing improvement who were not yesterday. Clean water is not a small thing.",
-      "acceptMessage": "Purification tablets and clean water containers. Six containers minimum. The baptisms can wait \u2014 the wound cleaning cannot.",
+      "acceptMessage": "Purification tablets and clean water containers. Six containers minimum. The baptisms can wait — the wound cleaning cannot.",
       "prerequisiteQuestIds": []
     },
     {
       "id": "quest_018",
       "traderId": "trader_003",
       "title": "Light in the Dark",
-      "description": "I have kept a light burning in the church tower every night since the outbreak. I believe survivors need to see it \u2014 a fixed point in the dark that means safety and food and care. The generator failed two weeks ago. I have been using candles. The candles are almost out. She describes the light in the tower as the single most important thing I do every night.",
+      "description": "I have kept a light burning in the church tower every night since the outbreak. I believe survivors need to see it — a fixed point in the dark that means safety and food and care. The generator failed two weeks ago. I have been using candles. The candles are almost out. She describes the light in the tower as the single most important thing I do every night.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -732,13 +738,14 @@
       ],
       "rewardMessage": "Four deer. The camp will eat tonight because of this.",
       "acceptMessage": "Hunt 4 deer. The hungry come to us and we must not turn them away.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_020",
       "traderId": "trader_002",
       "title": "Bait Run",
-      "description": "I have been tracking a pattern in animal movement near the tower that requires live bait traps to confirm. I need worms and maggots \u2014 not for fishing, though I will not explain the actual purpose. The data is more valuable than the explanation.",
+      "description": "I have been tracking a pattern in animal movement near the tower that requires live bait traps to confirm. I need worms and maggots — not for fishing, though I will not explain the actual purpose. The data is more valuable than the explanation.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 6,
@@ -771,7 +778,7 @@
       "id": "quest_021",
       "traderId": "trader_002",
       "title": "Bear Trouble",
-      "description": "A bear destroyed three weeks of stored equipment at the tower base camp. I catalogued the damage with unsettling precision before asking anyone for help \u2014 two radio units, one weather monitor, four storage containers. I want the bear dealt with but is more interested in studying the attack pattern than preventing the next one.",
+      "description": "A bear destroyed three weeks of stored equipment at the tower base camp. I catalogued the damage with unsettling precision before asking anyone for help — two radio units, one weather monitor, four storage containers. I want the bear dealt with but is more interested in studying the attack pattern than preventing the next one.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -796,15 +803,16 @@
           "amount": 4
         }
       ],
-      "rewardMessage": "Attack pattern documented. The bear acted unusually \u2014 I have questions about what drew it here.",
-      "acceptMessage": "One bear. Fisher's camp had similar trouble \u2014 the same animal, possibly. End it.",
-      "prerequisiteQuestIds": []
+      "rewardMessage": "Attack pattern documented. The bear acted unusually — I have questions about what drew it here.",
+      "acceptMessage": "One bear. Fisher's camp had similar trouble — the same animal, possibly. End it.",
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_022",
       "traderId": "trader_004",
       "title": "Net Repair",
-      "description": "My nets are the infrastructure of his entire operation. Without them the boats go out and come back with nothing. Two nets were destroyed in a storm that pushed debris through the lake shallows \u2014 torn beyond repair by something large and jagged that Fisher suspects was part of a sunken dock. I need materials to build new ones. He speaks about this the way most people speak about losing a limb.",
+      "description": "My nets are the infrastructure of his entire operation. Without them the boats go out and come back with nothing. Two nets were destroyed in a storm that pushed debris through the lake shallows — torn beyond repair by something large and jagged that Fisher suspects was part of a sunken dock. I need materials to build new ones. He speaks about this the way most people speak about losing a limb.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -836,6 +844,7 @@
       ],
       "rewardMessage": "The nets are in the water. The first haul is tonight. If it is good you will have earned more than I paid.",
       "acceptMessage": "Netting material and rope. Enough for two full replacement nets. I will build them myself.",
+      "journalStory": "",
       "prerequisiteQuestIds": [
         "quest_009"
       ]
@@ -844,7 +853,7 @@
       "id": "quest_023",
       "traderId": "trader_004",
       "title": "Fuel Delivery",
-      "description": "I agreed six weeks ago to supply Viktor with fish in exchange for fuel deliveries to run the camp generator. Viktor has held up his end. I have held up his end. The fuel needs to move on schedule or the arrangement breaks down, and I do not break arrangements \u2014 it is the only thing that keeps the whole network from collapsing into theft and violence.",
+      "description": "I agreed six weeks ago to supply Viktor with fish in exchange for fuel deliveries to run the camp generator. Viktor has held up his end. I have held up his end. The fuel needs to move on schedule or the arrangement breaks down, and I do not break arrangements — it is the only thing that keeps the whole network from collapsing into theft and violence.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -875,7 +884,7 @@
       "id": "quest_024",
       "traderId": "trader_002",
       "title": "Clearing the Shore",
-      "description": "Infected have been gathering along the fishing spots near the coast, making it impossible to work the nets safely. I have been monitoring the pattern \u2014 she believes they are following a scent trail from a body that washed ashore three weeks ago. I do not particularly care about Fisher's fishing operation. She cares about the data the clustering pattern provides.",
+      "description": "Infected have been gathering along the fishing spots near the coast, making it impossible to work the nets safely. I have been monitoring the pattern — she believes they are following a scent trail from a body that washed ashore three weeks ago. I do not particularly care about Fisher's fishing operation. She cares about the data the clustering pattern provides.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 24,
@@ -902,13 +911,14 @@
       ],
       "rewardMessage": "Three of them showed signs of saltwater exposure. They came from offshore. This is deeply significant.",
       "acceptMessage": "Twenty infected along the shore. Clear them and let me know if any appear to have come from the water. That part matters to me.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_025",
       "traderId": "trader_002",
       "title": "Rare Find",
-      "description": "I have heard a rumour \u2014 third-hand, which she notes reduces reliability by sixty percent \u2014 that a Winchester Model 70 is sitting in a farmhouse south of the radio tower. Pre-outbreak military surplus, possibly. I want it for the archive. The condition does not matter. The fact of its survival does.",
+      "description": "I have heard a rumour — third-hand, which she notes reduces reliability by sixty percent — that a Winchester Model 70 is sitting in a farmhouse south of the radio tower. Pre-outbreak military surplus, possibly. I want it for the archive. The condition does not matter. The fact of its survival does.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -937,7 +947,7 @@
       "id": "quest_026",
       "traderId": "trader_002",
       "title": "Pistol Collection",
-      "description": "My sidearm archive is missing three specific variants I have been cataloguing across the region. I am methodical about this in a way that most survivors find unsettling \u2014 I have a running list, cross-referenced against pre-outbreak manufacturing data, and she checks items off with the same expression regardless of what they cost to acquire.",
+      "description": "My sidearm archive is missing three specific variants I have been cataloguing across the region. I am methodical about this in a way that most survivors find unsettling — I have a running list, cross-referenced against pre-outbreak manufacturing data, and she checks items off with the same expression regardless of what they cost to acquire.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -971,7 +981,7 @@
       "id": "quest_027",
       "traderId": "trader_002",
       "title": "Optics Wanted",
-      "description": "I have a theory about optical manufacturing quality before and after the outbreak \u2014 specifically which lenses survived storage and which degraded. I need examples from different manufacturers, different grades. I will not pay less simply because the science sounds obscure. The science is not obscure. Most people are just not paying attention.",
+      "description": "I have a theory about optical manufacturing quality before and after the outbreak — specifically which lenses survived storage and which degraded. I need examples from different manufacturers, different grades. I will not pay less simply because the science sounds obscure. The science is not obscure. Most people are just not paying attention.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1011,7 +1021,7 @@
       "id": "quest_028",
       "traderId": "trader_002",
       "title": "Suppressor Hunt",
-      "description": "I want suppressors for my archive but I am also pragmatic. I trade two of everything \u2014 one for the archive, one for currency. Suppressors are rare enough to be worth considerably more than most weapons, and I have three outstanding debts she intends to settle in hardware rather than food.",
+      "description": "I want suppressors for my archive but I am also pragmatic. I trade two of everything — one for the archive, one for currency. Suppressors are rare enough to be worth considerably more than most weapons, and I have three outstanding debts she intends to settle in hardware rather than food.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1045,7 +1055,7 @@
       "id": "quest_029",
       "traderId": "trader_002",
       "title": "Ammo Stockpile",
-      "description": "I do not fight often but I am not naive about survival. Her ammunition reserve has been drawn down by three trades she made in the last month \u2014 she gave more than she intended to because the information she received was worth it. Now the reserve needs rebuilding before the next trade.",
+      "description": "I do not fight often but I am not naive about survival. Her ammunition reserve has been drawn down by three trades she made in the last month — she gave more than she intended to because the information she received was worth it. Now the reserve needs rebuilding before the next trade.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 24,
@@ -1072,7 +1082,7 @@
         }
       ],
       "rewardMessage": "Reserve rebuilt. I have room to negotiate again.",
-      "acceptMessage": "Common calibres \u2014 7.62x39, 5.56, 9mm. Whatever is easiest to source. I am not proud about calibre at this inventory level.",
+      "acceptMessage": "Common calibres — 7.62x39, 5.56, 9mm. Whatever is easiest to source. I am not proud about calibre at this inventory level.",
       "prerequisiteQuestIds": []
     },
     {
@@ -1097,14 +1107,14 @@
         }
       ],
       "rewardMessage": "Viktor responded within the hour. Whatever was in that letter, he did not sleep last night.",
-      "acceptMessage": "This goes to Viktor and no one else. Do not read it. You cannot open it anyway \u2014 it is sealed with a method Viktor will recognise.",
+      "acceptMessage": "This goes to Viktor and no one else. Do not read it. You cannot open it anyway — it is sealed with a method Viktor will recognise.",
       "prerequisiteQuestIds": []
     },
     {
       "id": "quest_031",
       "traderId": "trader_002",
       "title": "Medicines for Emma",
-      "description": "I have sourced a case of tetracycline from a looted pharmacy \u2014 more than I will ever need, acquired in a bulk trade she made for other reasons. I have no particular sentiment about Emma's clinic but I am a precise accountant of value, and field-grade antibiotics going unused while people die of infections is, by her calculation, an inefficiency I find irritating.",
+      "description": "I have sourced a case of tetracycline from a looted pharmacy — more than I will ever need, acquired in a bulk trade she made for other reasons. I have no particular sentiment about Emma's clinic but I am a precise accountant of value, and field-grade antibiotics going unused while people die of infections is, by her calculation, an inefficiency I find irritating.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1129,7 +1139,7 @@
       "id": "quest_032",
       "traderId": "trader_002",
       "title": "Tackle for the Fisher",
-      "description": "I acquired a crate of fishing hooks in a bulk trade she made for something else entirely. I have catalogued them \u2014 forty-seven hooks, three varieties, pre-outbreak manufacture \u2014 and determined they have no research value. Fisher, by contrast, would consider this a windfall. I do not waste things.",
+      "description": "I acquired a crate of fishing hooks in a bulk trade she made for something else entirely. I have catalogued them — forty-seven hooks, three varieties, pre-outbreak manufacture — and determined they have no research value. Fisher, by contrast, would consider this a windfall. I do not waste things.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1154,7 +1164,7 @@
       "id": "quest_033",
       "traderId": "trader_003",
       "title": "Message for Viktor",
-      "description": "I have been treating a survivor who escaped from a camp sixty kilometres north \u2014 badly wounded, feverish, barely coherent. In a lucid moment the survivor gave Emma a location and a name. The location matches where Viktor operates. The name is someone Viktor thought was dead. I do not know what it means but I know Viktor needs to know immediately.",
+      "description": "I have been treating a survivor who escaped from a camp sixty kilometres north — badly wounded, feverish, barely coherent. In a lucid moment the survivor gave Emma a location and a name. The location matches where Viktor operates. The name is someone Viktor thought was dead. I do not know what it means but I know Viktor needs to know immediately.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1179,7 +1189,7 @@
       "id": "quest_034",
       "traderId": "trader_003",
       "title": "A Gift for The Collector",
-      "description": "I found an annotated copy of Kafka's The Metamorphosis in the ruins of a house I was sheltering in. The annotations are remarkable \u2014 someone understood this book very deeply. I have read it twice and thought about The Collector, who I have never met but has heard described by Viktor as someone who collects things that have survived. This book has survived. She wants it to go somewhere it will be valued.",
+      "description": "I found an annotated copy of Kafka's The Metamorphosis in the ruins of a house I was sheltering in. The annotations are remarkable — someone understood this book very deeply. I have read it twice and thought about The Collector, who I have never met but has heard described by Viktor as someone who collects things that have survived. This book has survived. She wants it to go somewhere it will be valued.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1196,7 +1206,7 @@
           "amount": 3
         }
       ],
-      "rewardMessage": "The Collector sent a response I did not expect \u2014 detailed notes on the annotations with her own additions. I have read them four times.",
+      "rewardMessage": "The Collector sent a response I did not expect — detailed notes on the annotations with her own additions. I have read them four times.",
       "acceptMessage": "Take the book to The Collector at the radio tower. Tell her it was found in a house in Kabanino and that the annotations are worth reading.",
       "prerequisiteQuestIds": []
     },
@@ -1222,7 +1232,7 @@
         }
       ],
       "rewardMessage": "Fisher sent back dried fish in exchange. More than I expected. More than I asked for. That is very Fisher.",
-      "acceptMessage": "Three crates to Fisher. He knows they are coming \u2014 I sent word. Tell him the surplus is real this time, not a loan.",
+      "acceptMessage": "Three crates to Fisher. He knows they are coming — I sent word. Tell him the surplus is real this time, not a loan.",
       "prerequisiteQuestIds": []
     },
     {
@@ -1258,7 +1268,7 @@
       "id": "quest_037",
       "traderId": "trader_004",
       "title": "Salvage for The Collector",
-      "description": "I pulled up something unusual in my nets \u2014 looks valuable. The Collector at the radio tower is the one to know what it is. Take it to her.",
+      "description": "I pulled up something unusual in my nets — looks valuable. The Collector at the radio tower is the one to know what it is. Take it to her.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1312,7 +1322,7 @@
       "id": "quest_039",
       "traderId": "trader_001",
       "title": "Eyes on the Tower",
-      "description": "I have been watching the Altar Radio Tower for two weeks. Someone is using the equipment up there \u2014 he can see lights at night and the interference on his radio band has patterns he doesn't recognise. The Collector would know what it means. I need this information delivered before I acts on it.",
+      "description": "I have been watching the Altar Radio Tower for two weeks. Someone is using the equipment up there — he can see lights at night and the interference on his radio band has patterns he doesn't recognise. The Collector would know what it means. I need this information delivered before I acts on it.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1337,7 +1347,7 @@
       "id": "quest_040",
       "traderId": "trader_001",
       "title": "Redirected Aid",
-      "description": "A supply drop intended for Emma's clinic was intercepted and stripped by a group of opportunists before it could be delivered. I recovered what was left \u2014 bandages, mostly. He wants them delivered to Emma with an explanation he hasn't written yet.",
+      "description": "A supply drop intended for Emma's clinic was intercepted and stripped by a group of opportunists before it could be delivered. I recovered what was left — bandages, mostly. He wants them delivered to Emma with an explanation he hasn't written yet.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1362,7 +1372,7 @@
       "id": "quest_041",
       "traderId": "trader_001",
       "title": "The Fisher's Trade",
-      "description": "I intercepted a salvage cache that had Fisher's name written on it in marker \u2014 someone at the coast left it for him. My holding it as a favour. Fisher's goodwill is worth more than whatever's in the crate. This is I being politically smart.",
+      "description": "I intercepted a salvage cache that had Fisher's name written on it in marker — someone at the coast left it for him. My holding it as a favour. Fisher's goodwill is worth more than whatever's in the crate. This is I being politically smart.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1387,7 +1397,7 @@
       "id": "quest_042",
       "traderId": "trader_001",
       "title": "Field Medic",
-      "description": "I run my camp like a military unit \u2014 and military units bleed. His people get into firefights, accidents, and the occasional disagreement that turns physical. He needs medical supplies at a rate that concerns even him.",
+      "description": "I run my camp like a military unit — and military units bleed. His people get into firefights, accidents, and the occasional disagreement that turns physical. He needs medical supplies at a rate that concerns even him.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 24,
@@ -1425,7 +1435,7 @@
       "id": "quest_043",
       "traderId": "trader_001",
       "title": "Radio Check",
-      "description": "My two long-range radios have gone silent. He doesn't know if it's the batteries, the equipment, or something worse. Without comms, he's blind to anything more than five kilometres away \u2014 and right now that is a liability he cannot afford.",
+      "description": "My two long-range radios have gone silent. He doesn't know if it's the batteries, the equipment, or something worse. Without comms, he's blind to anything more than five kilometres away — and right now that is a liability he cannot afford.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1465,7 +1475,7 @@
       "id": "quest_044",
       "traderId": "trader_001",
       "title": "Winter Cache",
-      "description": "I think three months ahead. The others react to the present. That gap in planning is why my camp will survive winter and others will not. He is filling caches now \u2014 food, fuel, and tools \u2014 so that when the roads freeze, his people have options.",
+      "description": "I think three months ahead. The others react to the present. That gap in planning is why my camp will survive winter and others will not. He is filling caches now — food, fuel, and tools — so that when the roads freeze, his people have options.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1537,7 +1547,7 @@
       "id": "quest_046",
       "traderId": "trader_001",
       "title": "Tool Run",
-      "description": "My camp maintenance has fallen behind because no one can find a working hacksaw. A former construction site near Novo should have tools. If the infected haven't completely overrun it \u2014 and they may have.",
+      "description": "My camp maintenance has fallen behind because no one can find a working hacksaw. A former construction site near Novo should have tools. If the infected haven't completely overrun it — and they may have.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1575,7 +1585,7 @@
       "id": "quest_047",
       "traderId": "trader_001",
       "title": "Clear the Road",
-      "description": "The highway junction north of Novodmitrovsk is completely impassable. A convoy got ambushed there in the early weeks and the vehicles are still blocking the road. Infected cluster around the wreckage \u2014 drawn by the smell, probably \u2014 and My supply trucks cannot push through.",
+      "description": "The highway junction north of Novodmitrovsk is completely impassable. A convoy got ambushed there in the early weeks and the vehicles are still blocking the road. Infected cluster around the wreckage — drawn by the smell, probably — and My supply trucks cannot push through.",
       "type": 1,
       "repeatable": true,
       "cooldownHours": 24,
@@ -1600,7 +1610,8 @@
       "acceptMessage": "Twenty-five infected at the junction. You have done this before. Get it done before my next convoy moves.",
       "prerequisiteQuestIds": [
         "quest_011"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_048",
@@ -1629,13 +1640,14 @@
       ],
       "rewardMessage": "That'll feed people for a few days at least.",
       "acceptMessage": "Three deer. The camp eats tonight.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_049",
       "traderId": "trader_001",
       "title": "Wolf Pack",
-      "description": "A pack of eight wolves has been tracking My runners along the northern forest road. Three runners have been forced to turn back in the last week \u2014 one badly mauled. I do not tolerate anything that disrupts my supply lines.",
+      "description": "A pack of eight wolves has been tracking My runners along the northern forest road. Three runners have been forced to turn back in the last week — one badly mauled. I do not tolerate anything that disrupts my supply lines.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1661,14 +1673,15 @@
         }
       ],
       "rewardMessage": "No wolf sightings since. The northern road is functional again.",
-      "acceptMessage": "The whole pack. Do not scatter them \u2014 that just moves the problem. Find them and finish it.",
-      "prerequisiteQuestIds": []
+      "acceptMessage": "The whole pack. Do not scatter them — that just moves the problem. Find them and finish it.",
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_050",
       "traderId": "trader_001",
       "title": "Boar Cull",
-      "description": "The boar problem has escalated. What started as minor crop damage has become a genuine security issue \u2014 three boars broke into the supply tent last night and destroyed enough food to set the camp back a week. I am not calm about this.",
+      "description": "The boar problem has escalated. What started as minor crop damage has become a genuine security issue — three boars broke into the supply tent last night and destroyed enough food to set the camp back a week. I am not calm about this.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1697,13 +1710,14 @@
       "acceptMessage": "Five boars. I want them all gone. The camp cannot afford another night like last night.",
       "prerequisiteQuestIds": [
         "quest_014"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_051",
       "traderId": "trader_001",
       "title": "Parts for Fisher",
-      "description": "My salvage team pulled a marine diesel fuel pump from a sunken boat near the coast road. Fisher has been asking about one for two months \u2014 his primary fishing vessel has been running at half capacity without it. I am doing this as much for the alliance as for Fisher personally.",
+      "description": "My salvage team pulled a marine diesel fuel pump from a sunken boat near the coast road. Fisher has been asking about one for two months — his primary fishing vessel has been running at half capacity without it. I am doing this as much for the alliance as for Fisher personally.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1728,7 +1742,7 @@
       "id": "quest_052",
       "traderId": "trader_001",
       "title": "Medicine Pledge",
-      "description": "Six weeks ago I made Emma a promise \u2014 when he found military-grade antibiotics, he would send them to the church. He found them three days ago in a dead soldier's pack. I do not break promises. It is how he stays trusted.",
+      "description": "Six weeks ago I made Emma a promise — when he found military-grade antibiotics, he would send them to the church. He found them three days ago in a dead soldier's pack. I do not break promises. It is how he stays trusted.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1759,7 +1773,7 @@
       "id": "quest_053",
       "traderId": "trader_001",
       "title": "Map Drop",
-      "description": "I have spent two weeks compiling a map of infected movement patterns near the Altar Radio Tower. The patterns are not random \u2014 something is drawing them. The Collector needs to see this before I acts on what it might mean.",
+      "description": "I have spent two weeks compiling a map of infected movement patterns near the Altar Radio Tower. The patterns are not random — something is drawing them. The Collector needs to see this before I acts on what it might mean.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1786,7 +1800,7 @@
       "id": "quest_054",
       "traderId": "trader_001",
       "title": "Morale Package",
-      "description": "Fisher's crew have been working eighteen-hour days preparing for winter. I respect that kind of work even if he would not say so. He put together a care package \u2014 small luxuries, things the coast cannot easily source. It is as close to generosity as I gets.",
+      "description": "Fisher's crew have been working eighteen-hour days preparing for winter. I respect that kind of work even if he would not say so. He put together a care package — small luxuries, things the coast cannot easily source. It is as close to generosity as I gets.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1836,7 +1850,7 @@
       "id": "quest_056",
       "traderId": "trader_001",
       "title": "Data Cache",
-      "description": "Viktor stripped a flash drive from a dead CDF soldier. It is encrypted. He cannot read it. The Collector has equipment at the tower that might. I do not know what is on it but the soldier was moving alone and armed with weapons above his rank \u2014 which means it matters.",
+      "description": "Viktor stripped a flash drive from a dead CDF soldier. It is encrypted. He cannot read it. The Collector has equipment at the tower that might. I do not know what is on it but the soldier was moving alone and armed with weapons above his rank — which means it matters.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1865,7 +1879,7 @@
       "id": "quest_057",
       "traderId": "trader_002",
       "title": "Night Vision",
-      "description": "I have a buyer for night vision equipment \u2014 a survivor group three days north who are willing to pay in radio components I need badly. I have not told them the price yet. I am waiting until I have the equipment in hand. She negotiates from a position of supply, never demand.",
+      "description": "I have a buyer for night vision equipment — a survivor group three days north who are willing to pay in radio components I need badly. I have not told them the price yet. I am waiting until I have the equipment in hand. She negotiates from a position of supply, never demand.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1892,6 +1906,7 @@
       ],
       "rewardMessage": "The trade completed at twice the rate I initially calculated. The buyer was desperate. I simply waited.",
       "acceptMessage": "A PNV-10T. Military grade. Civilian equivalents will not satisfy the buyer and will damage my reputation.",
+      "journalStory": "",
       "prerequisiteQuestIds": [
         "quest_027"
       ]
@@ -1900,7 +1915,7 @@
       "id": "quest_058",
       "traderId": "trader_002",
       "title": "Blade Collection",
-      "description": "I have recently begun documenting edged weapons \u2014 not out of aesthetic interest but because blades require craft in a way that firearms do not, and craft degrades in predictable ways under survival conditions. I want specimens across the range: hunting, combat, improvised. The contrast is the data.",
+      "description": "I have recently begun documenting edged weapons — not out of aesthetic interest but because blades require craft in a way that firearms do not, and craft degrades in predictable ways under survival conditions. I want specimens across the range: hunting, combat, improvised. The contrast is the data.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -1973,7 +1988,7 @@
       "id": "quest_060",
       "traderId": "trader_002",
       "title": "Field Rations",
-      "description": "I do not leave the tower often. When I do it is at night, for reasons I do not share. I need provisions for extended operations \u2014 calorie-dense, compact, long shelf life. I have been at reduced rations for a week and it is affecting my data collection, whichhe considers a more significant problem than the hunger itself.",
+      "description": "I do not leave the tower often. When I do it is at night, for reasons I do not share. I need provisions for extended operations — calorie-dense, compact, long shelf life. I have been at reduced rations for a week and it is affecting my data collection, whichhe considers a more significant problem than the hunger itself.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 12,
@@ -2007,7 +2022,7 @@
       "id": "quest_061",
       "traderId": "trader_002",
       "title": "Map Collection",
-      "description": "I have been building a layered map of the region since she arrived at the tower \u2014 one layer for infected movement, one for survivor camp locations, one for resource sites, one for anomalies I have not yet classified. I need more base maps to work from. Paper ones. Pre-outbreak official surveys.",
+      "description": "I have been building a layered map of the region since she arrived at the tower — one layer for infected movement, one for survivor camp locations, one for resource sites, one for anomalies I have not yet classified. I need more base maps to work from. Paper ones. Pre-outbreak official surveys.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2064,13 +2079,15 @@
       ],
       "rewardMessage": "Good. I can hear myself think again.",
       "acceptMessage": "Twenty infected. The approach to the tower must be clear.",
-      "prerequisiteQuestIds": []
+      "journalStory": "",
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_063",
       "traderId": "trader_002",
       "title": "Pest Control",
-      "description": "Wolves have been circling the tower at night for a week. I have been logging their behaviour \u2014 the pattern suggests they are drawn to sound or heat rather than food, which is unusual. I want them cleared, but only after I have completed her observation notes. I will signal when I am ready. Efficiency over urgency.",
+      "description": "Wolves have been circling the tower at night for a week. I have been logging their behaviour — the pattern suggests they are drawn to sound or heat rather than food, which is unusual. I want them cleared, but only after I have completed her observation notes. I will signal when I am ready. Efficiency over urgency.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2093,13 +2110,14 @@
       ],
       "rewardMessage": "The data collected during the observation window is exceptional. The clearing was necessary. Both outcomes were optimal.",
       "acceptMessage": "Six wolves. Not before I send word that the observation window is closed.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_064",
       "traderId": "trader_002",
       "title": "Trophy Hunt",
-      "description": "I want a bear pelt. I will not explain why \u2014 I have a habit of not explaining things that she considers self-evident. What is clear is that I have asked three times in the last month and the pelt has not materialised, which I find inefficient.",
+      "description": "I want a bear pelt. I will not explain why — I have a habit of not explaining things that she considers self-evident. What is clear is that I have asked three times in the last month and the pelt has not materialised, which I find inefficient.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2128,13 +2146,14 @@
       "acceptMessage": "One bear pelt. Undamaged as possible. The condition matters more than the speed.",
       "prerequisiteQuestIds": [
         "quest_025"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_065",
       "traderId": "trader_002",
       "title": "Trade Goods for Viktor",
-      "description": "I have surplus weapons components that Viktor can use \u2014 AK parts, maintenance tools, cleaning kits. I am not being charitable. I am making a calculated trade: Viktor's goodwill and access to his route network are worth considerably more than the hardware. I am also, incidentally, clearing storage space I need for the archive.",
+      "description": "I have surplus weapons components that Viktor can use — AK parts, maintenance tools, cleaning kits. I am not being charitable. I am making a calculated trade: Viktor's goodwill and access to his route network are worth considerably more than the hardware. I am also, incidentally, clearing storage space I need for the archive.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2159,7 +2178,7 @@
       "id": "quest_066",
       "traderId": "trader_002",
       "title": "Rare Book",
-      "description": "I acquired a copy of Kafka's The Trial in a trade two months ago. I have read it twice \u2014 once for the text, once for annotations someone made in the margins that she found more interesting than Kafka. I have decided Emma would value it more than I do. This is, for The Collector, an unusually generous impulse, and I am slightly unsure what to make of it.",
+      "description": "I acquired a copy of Kafka's The Trial in a trade two months ago. I have read it twice — once for the text, once for annotations someone made in the margins that she found more interesting than Kafka. I have decided Emma would value it more than I do. This is, for The Collector, an unusually generous impulse, and I am slightly unsure what to make of it.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2186,7 +2205,7 @@
       "id": "quest_067",
       "traderId": "trader_002",
       "title": "Fishing Gear",
-      "description": "I acquired fishing equipment in a bulk trade without realising it was in the crate. I have no use for fishing rods. She catalogued them anyway \u2014 force of habit \u2014 and determined they are better quality than Fisher's current kit. The optimal outcome is to get them to Fisher. I am annoyed at the inefficiency of having acquired them in the first place.",
+      "description": "I acquired fishing equipment in a bulk trade without realising it was in the crate. I have no use for fishing rods. She catalogued them anyway — force of habit — and determined they are better quality than Fisher's current kit. The optimal outcome is to get them to Fisher. I am annoyed at the inefficiency of having acquired them in the first place.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2211,7 +2230,7 @@
       "id": "quest_068",
       "traderId": "trader_002",
       "title": "Viktor's Intel",
-      "description": "I have compiled a dossier on survivor camp locations Viktor does not know about \u2014 three camps within his network's range that he has been unaware of for months. Two are potential allies. One concerns her. I am sending all three because Viktor's judgement on people is, she acknowledges, considerably better than hers.",
+      "description": "I have compiled a dossier on survivor camp locations Viktor does not know about — three camps within his network's range that he has been unaware of for months. Two are potential allies. One concerns her. I am sending all three because Viktor's judgement on people is, she acknowledges, considerably better than hers.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2265,7 +2284,7 @@
       "id": "quest_070",
       "traderId": "trader_003",
       "title": "Healing Hands",
-      "description": "My clinic has been overwhelmed with infected wounds this week \u2014 three separate groups arrived in two days, all with the same kind of jagged lacerations consistent with broken glass or torn metal. Someone or something is driving people into dangerous buildings. I cannot treat the wounds without antiseptic. I am asking while simultaneously changing bandages.",
+      "description": "My clinic has been overwhelmed with infected wounds this week — three separate groups arrived in two days, all with the same kind of jagged lacerations consistent with broken glass or torn metal. Someone or something is driving people into dangerous buildings. I cannot treat the wounds without antiseptic. I am asking while simultaneously changing bandages.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 24,
@@ -2297,6 +2316,7 @@
       ],
       "rewardMessage": "Seven wounds closed and clean. The infection risk has dropped significantly. Thank you.",
       "acceptMessage": "Disinfectant spray and sewing kits. The wounds need to be cleaned before they can be closed.",
+      "journalStory": "",
       "prerequisiteQuestIds": []
     },
     {
@@ -2347,7 +2367,7 @@
       "id": "quest_072",
       "traderId": "trader_003",
       "title": "Safe Passage",
-      "description": "I have been rigging a warning system around the church perimeter \u2014 trip lines, bells made from tin cans, a series of markers visible from the tower. I need rope and wire to complete the outer ring. When it is done, nothing can approach the church at night without her knowing. She describes the system with the quiet pride of someone who has not slept well in two years.",
+      "description": "I have been rigging a warning system around the church perimeter — trip lines, bells made from tin cans, a series of markers visible from the tower. I need rope and wire to complete the outer ring. When it is done, nothing can approach the church at night without her knowing. She describes the system with the quiet pride of someone who has not slept well in two years.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2383,7 +2403,7 @@
       "id": "quest_073",
       "traderId": "trader_003",
       "title": "Cooking for Many",
-      "description": "I feed everyone who arrives at the church \u2014 always, regardless of who they are or what they have done. I do not ask questions at the door. I have been doing this for two years and I have fed people she later learned were dangerous and people I was certain would not survive the week. Both groups have surprised her, in opposite directions.",
+      "description": "I feed everyone who arrives at the church — always, regardless of who they are or what they have done. I do not ask questions at the door. I have been doing this for two years and I have fed people she later learned were dangerous and people I was certain would not survive the week. Both groups have surprised her, in opposite directions.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 12,
@@ -2417,7 +2437,7 @@
       "id": "quest_074",
       "traderId": "trader_003",
       "title": "Pain Relief",
-      "description": "I have three patients who are in genuine pain \u2014 not discomfort, not the general difficulty of survival, but acute pain from injuries that needed better treatment than she could provide. I have been managing with what I have. I am asking for morphine and epinephrine now because asking earlier felt, I admit, like a luxury I was not entitled to. I was wrong about that.",
+      "description": "I have three patients who are in genuine pain — not discomfort, not the general difficulty of survival, but acute pain from injuries that needed better treatment than she could provide. I have been managing with what I have. I am asking for morphine and epinephrine now because asking earlier felt, I admit, like a luxury I was not entitled to. I was wrong about that.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 48,
@@ -2453,7 +2473,7 @@
       "id": "quest_075",
       "traderId": "trader_003",
       "title": "Protect the Flock",
-      "description": "Infected have begun gathering outside the church in larger numbers than I have seen since the first months. I do not know what has changed \u2014 the weather, the season, a source of sound or smell I cannot identify. What I know is that two people have been unable to leave the church for three days and I cannot provide care to people who cannot reach her.",
+      "description": "Infected have begun gathering outside the church in larger numbers than I have seen since the first months. I do not know what has changed — the weather, the season, a source of sound or smell I cannot identify. What I know is that two people have been unable to leave the church for three days and I cannot provide care to people who cannot reach her.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2476,13 +2496,14 @@
       ],
       "rewardMessage": "The roads are passable. Four new arrivals came through within an hour of the clearing. They had been waiting.",
       "acceptMessage": "Clear the infected from the church perimeter and the road south. People need to be able to reach us.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_076",
       "traderId": "trader_003",
       "title": "The Pack Returns",
-      "description": "The wolf pack Emma dealt with before has returned \u2014 or a different pack has found the same territory. A survivor arrived at the church last night with wounds consistent with a wolf attack. He had been running for six hours. I cleaned the wounds and listened to where he had come from. The location is the same forest. I am less patient about this than the first time.",
+      "description": "The wolf pack Emma dealt with before has returned — or a different pack has found the same territory. A survivor arrived at the church last night with wounds consistent with a wolf attack. He had been running for six hours. I cleaned the wounds and listened to where he had come from. The location is the same forest. I am less patient about this than the first time.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2507,13 +2528,14 @@
       "acceptMessage": "The north forest. Fifteen wolves minimum from the survivor's account. I am asking you to end this. Completely.",
       "prerequisiteQuestIds": [
         "quest_016"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_077",
       "traderId": "trader_003",
       "title": "Mercy Kill",
-      "description": "A bear has been circling the village for four days \u2014 visibly injured, one leg dragging, moving with the erratic pattern of an animal in severe pain. I watch it from the church tower every morning. I have decided that allowing it to suffer is not consistent with her beliefs, and that its presence near the village is a danger I cannot justify. She frames this as a mercy, not a kill. The distinction matters to her.",
+      "description": "A bear has been circling the village for four days — visibly injured, one leg dragging, moving with the erratic pattern of an animal in severe pain. I watch it from the church tower every morning. I have decided that allowing it to suffer is not consistent with her beliefs, and that its presence near the village is a danger I cannot justify. She frames this as a mercy, not a kill. The distinction matters to her.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2536,13 +2558,14 @@
       ],
       "rewardMessage": "I watched from the tower. It was quick. Thank you for that.",
       "acceptMessage": "The bear circles the east side of the village at dawn. It will not run. It cannot. Make it quick.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_078",
       "traderId": "trader_003",
       "title": "Word to Fisher",
-      "description": "I heard through a survivor that Fisher's camp lost three people in a bear attack at the shore last week. I do not know Fisher well \u2014 we have met twice \u2014 but I have sent medical supplies south twice and he has never sent thanks. I do not require thanks. I require that his people are alive to receive my supplies. I am sending word and medical support.",
+      "description": "I heard through a survivor that Fisher's camp lost three people in a bear attack at the shore last week. I do not know Fisher well — we have met twice — but I have sent medical supplies south twice and he has never sent thanks. I do not require thanks. I require that his people are alive to receive my supplies. I am sending word and medical support.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2567,7 +2590,7 @@
       "id": "quest_079",
       "traderId": "trader_003",
       "title": "Candle for Viktor",
-      "description": "I pray for Viktor every night. I am aware he would find this uncomfortable. I have decided to send him a physical token \u2014 a candle she made herself from rendered fat and a wick cut from her own spare clothing \u2014 as a reminder that someone is keeping track of whether he survives. I know Viktor operates on debts and favours. I am sending this with no expectation of return. She wants him to know what that feels like.",
+      "description": "I pray for Viktor every night. I am aware he would find this uncomfortable. I have decided to send him a physical token — a candle she made herself from rendered fat and a wick cut from her own spare clothing — as a reminder that someone is keeping track of whether he survives. I know Viktor operates on debts and favours. I am sending this with no expectation of return. She wants him to know what that feels like.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2594,7 +2617,7 @@
       "id": "quest_080",
       "traderId": "trader_003",
       "title": "Offering for The Collector",
-      "description": "I have been thinking about The Collector since the book exchange. I know The Collector is alone at the tower \u2014 truly alone, in a way that Emma, surrounded by survivors, is not. I have prayed about what to send and has decided on another book, this one with her own annotations. I am aware this may be presumptuous. I send it anyway.",
+      "description": "I have been thinking about The Collector since the book exchange. I know The Collector is alone at the tower — truly alone, in a way that Emma, surrounded by survivors, is not. I have prayed about what to send and has decided on another book, this one with her own annotations. I am aware this may be presumptuous. I send it anyway.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2619,7 +2642,7 @@
       "id": "quest_081",
       "traderId": "trader_003",
       "title": "Saline for the Shore",
-      "description": "Fisher's crew works the water in all weather and injuries are frequent \u2014 lacerations, fractures, the occasional drowning that becomes a near-drowning if they are lucky. I have been sending basic supplies south for months. I am upgrading what I send: saline bags, enough to manage serious blood loss for at least a week. She hopes Fisher has someone who knows how to use them.",
+      "description": "Fisher's crew works the water in all weather and injuries are frequent — lacerations, fractures, the occasional drowning that becomes a near-drowning if they are lucky. I have been sending basic supplies south for months. I am upgrading what I send: saline bags, enough to manage serious blood loss for at least a week. She hopes Fisher has someone who knows how to use them.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2646,7 +2669,7 @@
       "id": "quest_082",
       "traderId": "trader_003",
       "title": "Church Records",
-      "description": "I have been keeping records since the first week \u2014 names, dates, circumstances, last known locations of family members. I have documented four hundred and twelve survivors who have passed through the church. I am sending a copy of the records to Viktor because she trusts him to protect them if something happens to her, and because I need a reason to believe someone else knows these people existed.",
+      "description": "I have been keeping records since the first week — names, dates, circumstances, last known locations of family members. I have documented four hundred and twelve survivors who have passed through the church. I am sending a copy of the records to Viktor because she trusts him to protect them if something happens to her, and because I need a reason to believe someone else knows these people existed.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2671,7 +2694,7 @@
       "id": "quest_083",
       "traderId": "trader_004",
       "title": "Net and Line",
-      "description": "My replacement nets are in the water but the lines holding them are already showing wear \u2014 he used substandard rope from a cache that had been sitting in damp conditions too long. He knew when he tied them that they were wrong but he had nothing better. I need proper replacement line before the nets drift and he loses them to the current.",
+      "description": "My replacement nets are in the water but the lines holding them are already showing wear — he used substandard rope from a cache that had been sitting in damp conditions too long. He knew when he tied them that they were wrong but he had nothing better. I need proper replacement line before the nets drift and he loses them to the current.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 12,
@@ -2702,7 +2725,7 @@
         }
       ],
       "rewardMessage": "The lines are replaced. I lost one net to the current before you came back. The other four are holding.",
-      "acceptMessage": "Fishing line \u2014 actual fishing line, not rope. And netting twine if you can find any. I need to restring half the net system.",
+      "acceptMessage": "Fishing line — actual fishing line, not rope. And netting twine if you can find any. I need to restring half the net system.",
       "prerequisiteQuestIds": [
         "quest_022"
       ]
@@ -2711,7 +2734,7 @@
       "id": "quest_084",
       "traderId": "trader_004",
       "title": "Boat Repair",
-      "description": "My main rowboat \u2014 the one I have used for twenty years, before the outbreak and through it \u2014 took a rock through the hull in shallow water near the eastern shore. The rock took a section of planking the size of a dinner plate. Fisher patched it with canvas and is keeping the boat out of water until I can do it properly. He describes the damage in a tone that suggests he takes it personally.",
+      "description": "My main rowboat — the one I have used for twenty years, before the outbreak and through it — took a rock through the hull in shallow water near the eastern shore. The rock took a section of planking the size of a dinner plate. Fisher patched it with canvas and is keeping the boat out of water until I can do it properly. He describes the damage in a tone that suggests he takes it personally.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2742,14 +2765,14 @@
         }
       ],
       "rewardMessage": "My boat is repaired. I'll take her out at dawn to test the hull. Thank you so much, my friend.",
-      "acceptMessage": "Wooden planks and nails. Sealant if you find any \u2014 tar, resin, anything waterproof. The hull needs to be tight before that boat goes back in the water.",
+      "acceptMessage": "Wooden planks and nails. Sealant if you find any — tar, resin, anything waterproof. The hull needs to be tight before that boat goes back in the water.",
       "prerequisiteQuestIds": []
     },
     {
       "id": "quest_085",
       "traderId": "trader_004",
       "title": "Camp Supplies",
-      "description": "My camp crew works hard and eats more than Fisher planned for. I have been feeding twelve people on provisions for eight \u2014 the extras arrived three weeks ago, refugees from a flooded settlement inland. I did not turn them away. I do not explain this decision. He simply states the supply deficit and what is needed to close it.",
+      "description": "My camp crew works hard and eats more than Fisher planned for. I have been feeding twelve people on provisions for eight — the extras arrived three weeks ago, refugees from a flooded settlement inland. I did not turn them away. I do not explain this decision. He simply states the supply deficit and what is needed to close it.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 24,
@@ -2787,7 +2810,7 @@
       "id": "quest_086",
       "traderId": "trader_004",
       "title": "Shore Salvage",
-      "description": "I have been watching wreckage accumulate on the eastern shore for a week \u2014 debris from something large that came apart offshore. I do not know what it was. I know that debris means components, and components mean repairs, trade goods, or both. The items are still in the wreck \u2014 get there before the tide takes them.",
+      "description": "I have been watching wreckage accumulate on the eastern shore for a week — debris from something large that came apart offshore. I do not know what it was. I know that debris means components, and components mean repairs, trade goods, or both. The items are still in the wreck — get there before the tide takes them.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2814,7 +2837,7 @@
         }
       ],
       "rewardMessage": "The wreckage was a supply barge. The cargo hold was half intact. What you brought back sets us up for a month.",
-      "acceptMessage": "The shipwreck on the eastern shore. A fuel canister and two batteries. They are in the hold \u2014 get there before the tide.",
+      "acceptMessage": "The shipwreck on the eastern shore. A fuel canister and two batteries. They are in the hold — get there before the tide.",
       "prerequisiteQuestIds": [],
       "spawnItems": [
         {
@@ -2847,7 +2870,7 @@
       "id": "quest_087",
       "traderId": "trader_004",
       "title": "Storm Prep",
-      "description": "I watch the water the way a doctor watches a patient \u2014 he reads it, interprets it, draws conclusions three days ahead. The current and the cloud pattern both say storm. A significant one. I need the camp secured before it hits \u2014 equipment stored, boats pulled, fuel cached above the flood line. I am calm about this in the way of someone who has weathered storms before.",
+      "description": "I watch the water the way a doctor watches a patient — he reads it, interprets it, draws conclusions three days ahead. The current and the cloud pattern both say storm. A significant one. I need the camp secured before it hits — equipment stored, boats pulled, fuel cached above the flood line. I am calm about this in the way of someone who has weathered storms before.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2873,7 +2896,7 @@
           "amount": 1
         }
       ],
-      "rewardMessage": "The storm hit last night. The camp held. The boats are intact. Planning ahead is not caution \u2014 it is mathematics.",
+      "rewardMessage": "The storm hit last night. The camp held. The boats are intact. Planning ahead is not caution — it is mathematics.",
       "acceptMessage": "Rope to secure the boats, tarps to cover the equipment, containers to cache the fuel. Two days. Maybe less.",
       "prerequisiteQuestIds": []
     },
@@ -2881,7 +2904,7 @@
       "id": "quest_088",
       "traderId": "trader_004",
       "title": "Shore Clearance",
-      "description": "Infected have been washing ashore from somewhere offshore \u2014 possibly the sunken vessels I have been tracking on my rough charts, possibly something else. My crew cannot work the beach nets safely with infected emerging from the water at unpredictable intervals. Two crew members have refused to work the shore nets at all. I don't blame them. I do need it solved.",
+      "description": "Infected have been washing ashore from somewhere offshore — possibly the sunken vessels I have been tracking on my rough charts, possibly something else. My crew cannot work the beach nets safely with infected emerging from the water at unpredictable intervals. Two crew members have refused to work the shore nets at all. I don't blame them. I do need it solved.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2903,16 +2926,17 @@
         }
       ],
       "rewardMessage": "The crew is back on the beach nets. The haul tonight was the best in a month. Sometimes the solution is simple.",
-      "acceptMessage": "Twenty infected on the shore approach. Check the waterline too \u2014 some of them seem to come up from below.",
+      "acceptMessage": "Twenty infected on the shore approach. Check the waterline too — some of them seem to come up from below.",
       "prerequisiteQuestIds": [
         "quest_024"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_089",
       "traderId": "trader_004",
       "title": "Wolf at the Water",
-      "description": "Wolves have found the fish drying racks at the shore and have begun raiding them at night. I set up a watch but the wolves are patient \u2014 they wait until the watch changes and hit the racks in the gap. I respect the tactic in a detached professional way while also wanting them gone.",
+      "description": "Wolves have found the fish drying racks at the shore and have begun raiding them at night. I set up a watch but the wolves are patient — they wait until the watch changes and hit the racks in the gap. I respect the tactic in a detached professional way while also wanting them gone.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2935,13 +2959,14 @@
       ],
       "rewardMessage": "The racks have not been touched in three days. The watch rotation no longer has a gap.",
       "acceptMessage": "Four wolves working the shore at dusk. They move as a unit. Do not let them scatter.",
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_090",
       "traderId": "trader_004",
       "title": "Big Game",
-      "description": "A boar has been raiding My food stores for two weeks. Not a normal boar \u2014 this one is large enough that three crew members tried to drive it off with noise and it stood its ground. I measured the tracks. Fifty kilos minimum, possibly seventy. I have decided that trapping it is not practical and that shooting it requires someone with better aim than anyone at the camp.",
+      "description": "A boar has been raiding My food stores for two weeks. Not a normal boar — this one is large enough that three crew members tried to drive it off with noise and it stood its ground. I measured the tracks. Fifty kilos minimum, possibly seventy. I have decided that trapping it is not practical and that shooting it requires someone with better aim than anyone at the camp.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2966,13 +2991,14 @@
       "acceptMessage": "One boar. Large. It raids from the north side of the store tent. It is not afraid of people.",
       "prerequisiteQuestIds": [
         "quest_021"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_091",
       "traderId": "trader_004",
       "title": "Viktor's Order",
-      "description": "Viktor placed an order six weeks ago and I have had it ready for four. The delay is Viktor's \u2014 his runners could not make the run safely. I am not annoyed. I charge storage. It is in the terms. What I need now is someone to move it north before Viktor decides he no longer needs what he ordered, which would be a waste of four weeks of preparation.",
+      "description": "Viktor placed an order six weeks ago and I have had it ready for four. The delay is Viktor's — his runners could not make the run safely. I am not annoyed. I charge storage. It is in the terms. What I need now is someone to move it north before Viktor decides he no longer needs what he ordered, which would be a waste of four weeks of preparation.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -2990,7 +3016,7 @@
         }
       ],
       "rewardMessage": "Viktor confirmed receipt. I said nothing about the storage charge. I consider that acceptance.",
-      "acceptMessage": "The package is sealed and marked for Viktor. It goes to him directly \u2014 not to my camp, not to a runner. Viktor himself.",
+      "acceptMessage": "The package is sealed and marked for Viktor. It goes to him directly — not to my camp, not to a runner. Viktor himself.",
       "prerequisiteQuestIds": [
         "quest_023"
       ]
@@ -2999,7 +3025,7 @@
       "id": "quest_092",
       "traderId": "trader_004",
       "title": "Emma's Medicine",
-      "description": "I pulled a medical kit from a sunken boat last week \u2014 intact, waterproof case, contents dry. I have no use for it. I thought about trading it but the calculation came out in Emma's favour: I eat what Emma cannot use, and Emma heals people I cannot afford to lose. I am sending the kit with no arrangement and no debt created. He finds this arrangement efficient.",
+      "description": "I pulled a medical kit from a sunken boat last week — intact, waterproof case, contents dry. I have no use for it. I thought about trading it but the calculation came out in Emma's favour: I eat what Emma cannot use, and Emma heals people I cannot afford to lose. I am sending the kit with no arrangement and no debt created. He finds this arrangement efficient.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3024,7 +3050,7 @@
       "id": "quest_093",
       "traderId": "trader_004",
       "title": "Collector's Find",
-      "description": "My net pulled up something last week that I cannot identify \u2014 a sealed metal case with markings I do not recognise, watertight, heavy, clearly pre-outbreak manufacture. I have not opened it. He considered it and decided that if I cannot identify it he should not be the one to open it. The Collector can identify anything. I am sending it to her with the net coordinates where it was found.",
+      "description": "My net pulled up something last week that I cannot identify — a sealed metal case with markings I do not recognise, watertight, heavy, clearly pre-outbreak manufacture. I have not opened it. He considered it and decided that if I cannot identify it he should not be the one to open it. The Collector can identify anything. I am sending it to her with the net coordinates where it was found.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3055,8 +3081,6 @@
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
-      "deliveryTraderId": "trader_001",
-      "deliveryItemClass": "Rope",
       "objectives": [],
       "rewards": [
         {
@@ -3070,15 +3094,18 @@
       ],
       "rewardMessage": "Viktor sent a crate of ammunition in return. No note. No explanation. That is how Viktor says thank you.",
       "acceptMessage": "Six rope bundles to Viktor. Two trips if you have to. I know it is coming.",
+      "journalStory": "",
       "prerequisiteQuestIds": [
         "quest_041"
-      ]
+      ],
+      "deliveryTraderId": "trader_001",
+      "deliveryItemClass": "Rope"
     },
     {
       "id": "quest_095",
       "traderId": "trader_004",
       "title": "Parts for The Collector",
-      "description": "I have been salvaging electronic components from waterlogged equipment for two months \u2014 not because I need them but because The Collector mentioned once, in passing, that she needed radio frequency components and he remembered. I have assembled what he thinks is most of what she described. I am not certain because I do not entirely understand what sI need them for. I send them anyway.",
+      "description": "I have been salvaging electronic components from waterlogged equipment for two months — not because I need them but because The Collector mentioned once, in passing, that she needed radio frequency components and he remembered. I have assembled what he thinks is most of what she described. I am not certain because I do not entirely understand what sI need them for. I send them anyway.",
       "type": 2,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3103,7 +3130,7 @@
       "id": "quest_096",
       "traderId": "trader_001",
       "title": "Population Count",
-      "description": "I track survivor populations the way a chess player tracks pieces. Right now he believes there are three significant survivor groups within twenty kilometres that he has not made contact with. He needs someone to scout without engaging \u2014 headcount only, no recruitment.",
+      "description": "I track survivor populations the way a chess player tracks pieces. Right now he believes there are three significant survivor groups within twenty kilometres that he has not made contact with. He needs someone to scout without engaging — headcount only, no recruitment.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3136,7 +3163,7 @@
       "id": "quest_097",
       "traderId": "trader_002",
       "title": "Collector's Bounty",
-      "description": "I am offering a standing bounty on military-grade weapons \u2014 not for my archive but for a trade I am building toward that requires hardware I do not have. I will not say who the trade is with. I will not say what she expects to receive. I will pay the bounty as stated.",
+      "description": "I am offering a standing bounty on military-grade weapons — not for my archive but for a trade I am building toward that requires hardware I do not have. I will not say who the trade is with. I will not say what she expects to receive. I will pay the bounty as stated.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3176,7 +3203,7 @@
       "id": "quest_098",
       "traderId": "trader_003",
       "title": "The Long Vigil",
-      "description": "I have been sitting with a dying survivor for three days \u2014 a man I found collapsed on the church steps with no identification, no equipment, and wounds that suggested he had been running for a long time. He has been unconscious since he arrived. I have not left his side except to treat other patients. I need supplies to continue the vigil without the clinic failing around her.",
+      "description": "I have been sitting with a dying survivor for three days — a man I found collapsed on the church steps with no identification, no equipment, and wounds that suggested he had been running for a long time. He has been unconscious since he arrived. I have not left his side except to treat other patients. I need supplies to continue the vigil without the clinic failing around her.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3205,13 +3232,14 @@
       "acceptMessage": "Medical supplies for the clinic and food for Emma herself. I have not eaten properly in two days.",
       "prerequisiteQuestIds": [
         "quest_075"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_099",
       "traderId": "trader_004",
       "title": "The Final Haul",
-      "description": "I am planning the largest single fishing operation of the post-outbreak period \u2014 every boat, every net, every crew member, working a three-day continuous haul before winter closes the deep lake access. I have been planning this for six weeks. The infected on the approach and the wolf pack near the north shore are the only things standing between the camp and the biggest food reserve it has ever had.",
+      "description": "I am planning the largest single fishing operation of the post-outbreak period — every boat, every net, every crew member, working a three-day continuous haul before winter closes the deep lake access. I have been planning this for six weeks. The infected on the approach and the wolf pack near the north shore are the only things standing between the camp and the biggest food reserve it has ever had.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3245,13 +3273,14 @@
       "acceptMessage": "Thirty infected on the east approach, three wolves on the north shore. Clear both before the boats go out at dawn.",
       "prerequisiteQuestIds": [
         "quest_088"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_100",
       "traderId": "trader_002",
       "title": "The Grand Collection",
-      "description": "I have been working toward this for six months. She calls it the Grand Collection \u2014 a complete inventory of every significant weapon type that has survived in the region, documented, catalogued, cross-referenced. I need four specific pieces that have eluded her. When she describes it you realise I have been building toward this since the first week she arrived at the tower alone with three crates of salvage. This is what I have been doing all along.",
+      "description": "I have been working toward this for six months. She calls it the Grand Collection — a complete inventory of every significant weapon type that has survived in the region, documented, catalogued, cross-referenced. I need four specific pieces that have eluded her. When she describes it you realise I have been building toward this since the first week she arrived at the tower alone with three crates of salvage. This is what I have been doing all along.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3338,7 +3367,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_102",
@@ -3367,7 +3397,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_103",
@@ -3396,7 +3427,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_104",
@@ -3425,7 +3457,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_105",
@@ -3454,7 +3487,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_106",
@@ -3523,7 +3557,7 @@
       "id": "quest_108",
       "traderId": "trader_001",
       "title": "Suppressor Stock",
-      "description": "My quiet work requires quiet tools. He needs suppressors \u2014 military grade if possible.",
+      "description": "My quiet work requires quiet tools. He needs suppressors — military grade if possible.",
       "acceptMessage": "Two suppressors. I don't care what calibre.",
       "rewardMessage": "These will serve well. Quiet is how you stay alive.",
       "type": 0,
@@ -3712,7 +3746,7 @@
       "traderId": "trader_001",
       "title": "Improvised Armoury",
       "description": "I want stone knives and bone tools cached at waypoints along my route. They're not pretty but they keep people alive.",
-      "acceptMessage": "Five stone knives. Make them yourself or find them \u2014 doesn't matter.",
+      "acceptMessage": "Five stone knives. Make them yourself or find them — doesn't matter.",
       "rewardMessage": "These will do the job. Every cache point covered.",
       "type": 0,
       "repeatable": true,
@@ -3745,7 +3779,7 @@
       "id": "quest_114",
       "traderId": "trader_001",
       "title": "Dead Drop",
-      "description": "I intercepted a message. Someone is leaving dead drops along the northern route \u2014 information that could change the balance of power in this region. The contact leaves a copy of The Raven at the Fire Station in Chernaya Polyana. If the book is there, the message is real.",
+      "description": "I intercepted a message. Someone is leaving dead drops along the northern route — information that could change the balance of power in this region. The contact leaves a copy of The Raven at the Fire Station in Chernaya Polyana. If the book is there, the message is real.",
       "acceptMessage": "The Fire Station in Chernaya Polyana. Ground floor. Find the copy of The Raven and bring it back to me.",
       "rewardMessage": "This is bigger than I thought. I need to talk to Emma and The Collector.",
       "type": 0,
@@ -3779,8 +3813,8 @@
     {
       "id": "quest_115",
       "traderId": "trader_001",
-      "title": "The Signal \u2014 Viktor's Message",
-      "description": "I have decoded part of the intercepted signal. He needs you to carry a message to Sister Emma and The Collector. Something is happening \u2014 a group with military hardware is moving through the region and they're not friendly.",
+      "title": "The Signal — Viktor's Message",
+      "description": "I have decoded part of the intercepted signal. He needs you to carry a message to Sister Emma and The Collector. Something is happening — a group with military hardware is moving through the region and they're not friendly.",
       "acceptMessage": "Get this to Emma first, then The Collector. Don't let anyone else see it.",
       "rewardMessage": "Good. Now we wait and see what they make of it.",
       "type": 2,
@@ -3819,7 +3853,7 @@
       "id": "quest_116",
       "traderId": "trader_001",
       "title": "Armed Response",
-      "description": "The threat is real. My contact confirmed a hostile group is moving through the northeastern corridor \u2014 they are driving infected ahead of them to clear the roads. I need the infected cleared from the north road before they can use them as cover to approach the camp.",
+      "description": "The threat is real. My contact confirmed a hostile group is moving through the northeastern corridor — they are driving infected ahead of them to clear the roads. I need the infected cleared from the north road before they can use them as cover to approach the camp.",
       "acceptMessage": "Ten infected on the north road. They are being pushed ahead of the hostile group. Clear them before the group reaches us.",
       "rewardMessage": "That buys us time. Emma and The Collector are already moving.",
       "type": 1,
@@ -3844,15 +3878,16 @@
       ],
       "prerequisiteQuestIds": [
         "quest_115"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_117",
       "traderId": "trader_001",
-      "title": "The Signal \u2014 Final Preparations",
+      "title": "The Signal — Final Preparations",
       "description": "I am pulling in every favour he has. He needs supplies to fortify the northern camp before the hostile group arrives. This is the last run before everything changes.",
       "acceptMessage": "Ammo, medical supplies, rope. Whatever you can carry. We're dug in after this.",
-      "rewardMessage": "We're as ready as we're going to be. Whatever comes next \u2014 we face it together.",
+      "rewardMessage": "We're as ready as we're going to be. Whatever comes next — we face it together.",
       "type": 0,
       "repeatable": false,
       "cooldownHours": 0,
@@ -3925,7 +3960,7 @@
       "id": "quest_119",
       "traderId": "trader_001",
       "title": "Blade Cache",
-      "description": "Viktor caches backup weapons at every waypoint. He needs knives \u2014 reliable, simple, always useful.",
+      "description": "Viktor caches backup weapons at every waypoint. He needs knives — reliable, simple, always useful.",
       "acceptMessage": "Four knives. Any kind. Cache points need restocking.",
       "rewardMessage": "Good. Every waypoint covered.",
       "type": 0,
@@ -3982,7 +4017,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_121",
@@ -4050,7 +4086,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_123",
@@ -4088,7 +4125,7 @@
       "traderId": "trader_002",
       "title": "Optics Library",
       "description": "I am cataloguing every optical attachment that's passed through the region. I need more samples.",
-      "acceptMessage": "Any scope or optic you find. Condition doesn't matter \u2014 I can restore them.",
+      "acceptMessage": "Any scope or optic you find. Condition doesn't matter — I can restore them.",
       "rewardMessage": "Excellent additions. The catalogue grows.",
       "type": 0,
       "repeatable": false,
@@ -4166,7 +4203,7 @@
       "traderId": "trader_002",
       "title": "Shotgun Specimens",
       "description": "I want every shotgun variant documented. She'll take them off your hands if you find them.",
-      "acceptMessage": "Any shotgun. MP-133, MP-43, Blaze \u2014 bring what you find.",
+      "acceptMessage": "Any shotgun. MP-133, MP-43, Blaze — bring what you find.",
       "rewardMessage": "These fill gaps in the archive I've been missing for months.",
       "type": 0,
       "repeatable": false,
@@ -4263,7 +4300,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_129",
@@ -4292,7 +4330,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_130",
@@ -4321,7 +4360,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_131",
@@ -4350,7 +4390,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_132",
@@ -4440,7 +4481,7 @@
     {
       "id": "quest_134",
       "traderId": "trader_002",
-      "title": "The Signal \u2014 Research",
+      "title": "The Signal — Research",
       "description": "The Collector received Viktor's warning. I have been tracking radio signals from the tower and believes she can identify the hostile group's communication frequency. I need equipment to do it.",
       "acceptMessage": "Batteries and any radio equipment you find. I need to triangulate their position.",
       "rewardMessage": "I have them. They are broadcasting from the southwest. Viktor needs to know.",
@@ -4476,7 +4517,7 @@
     {
       "id": "quest_135",
       "traderId": "trader_002",
-      "title": "The Signal \u2014 Clear the Tower",
+      "title": "The Signal — Clear the Tower",
       "description": "I need the radio tower perimeter cleared. The infected are interfering with my equipment and I won't stop the signal analysis for anything.",
       "acceptMessage": "Twenty infected around the tower perimeter. I cannot work with that noise.",
       "rewardMessage": "Much better. The signal is clear now. I have what I need.",
@@ -4502,13 +4543,14 @@
       ],
       "prerequisiteQuestIds": [
         "quest_134"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_136",
       "traderId": "trader_002",
-      "title": "The Signal \u2014 Disrupt the Route",
-      "description": "I have identified the hostile group's supply route. They are driving infected ahead of them as they move \u2014 using the horde as cover. I need someone to clear the infected from the route before they can use them as a shield. Disrupt their advance without engaging the group directly.",
+      "title": "The Signal — Disrupt the Route",
+      "description": "I have identified the hostile group's supply route. They are driving infected ahead of them as they move — using the horde as cover. I need someone to clear the infected from the route before they can use them as a shield. Disrupt their advance without engaging the group directly.",
       "acceptMessage": "Fifteen infected on the supply route approach. Clear them and the hostile group loses their cover. Do not engage anyone who looks like a survivor.",
       "rewardMessage": "That will slow them significantly. Fisher needs to know what I have found.",
       "type": 1,
@@ -4533,12 +4575,13 @@
       ],
       "prerequisiteQuestIds": [
         "quest_135"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_137",
       "traderId": "trader_002",
-      "title": "The Signal \u2014 Collector's Message",
+      "title": "The Signal — Collector's Message",
       "description": "I have compiled everything she knows about the hostile group. I need it delivered to Fisher who controls the coastal supply routes they need.",
       "acceptMessage": "Get this to Fisher. He needs to know before they reach the coast.",
       "rewardMessage": "Good. The net closes. We may survive this yet.",
@@ -4712,14 +4755,15 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_142",
       "traderId": "trader_002",
       "title": "Equipment Salvage",
       "description": "I need electrical components to maintain my monitoring equipment at the tower.",
-      "acceptMessage": "Batteries \u2014 as many as you can carry. They drain fast up here.",
+      "acceptMessage": "Batteries — as many as you can carry. They drain fast up here.",
       "rewardMessage": "Good. The equipment stays operational for another month.",
       "type": 0,
       "repeatable": true,
@@ -4781,7 +4825,7 @@
       "id": "quest_144",
       "traderId": "trader_003",
       "title": "Splint Supply",
-      "description": "I have been seeing a lot of broken bones lately \u2014 people falling, fights, bad landings. I need splints stocked up.",
+      "description": "I have been seeing a lot of broken bones lately — people falling, fights, bad landings. I need splints stocked up.",
       "acceptMessage": "Six splints. Simple but lifesaving.",
       "rewardMessage": "Every one of these will make a difference to someone.",
       "type": 0,
@@ -4868,7 +4912,7 @@
       "id": "quest_147",
       "traderId": "trader_003",
       "title": "Mouths to Feed",
-      "description": "My aid station feeds survivors who can't fend for themselves. I need meat \u2014 any meat \u2014 to keep people going.",
+      "description": "My aid station feeds survivors who can't fend for themselves. I need meat — any meat — to keep people going.",
       "acceptMessage": "Sheep or goat. The flock near the village is wild now but still there.",
       "rewardMessage": "This will feed many people. You are doing God's work whether you know it or not.",
       "type": 1,
@@ -4896,7 +4940,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_148",
@@ -4929,7 +4974,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_149",
@@ -4958,7 +5004,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_150",
@@ -5033,7 +5080,7 @@
       "traderId": "trader_003",
       "title": "Aid Station Repairs",
       "description": "My aid station needs maintenance. The roof leaks and the walls need patching before winter.",
-      "acceptMessage": "Wooden planks and nails. Nothing complicated \u2014 just what's needed.",
+      "acceptMessage": "Wooden planks and nails. Nothing complicated — just what's needed.",
       "rewardMessage": "The station will hold through winter now. One less thing to worry about.",
       "type": 0,
       "repeatable": false,
@@ -5094,8 +5141,8 @@
     {
       "id": "quest_154",
       "traderId": "trader_003",
-      "title": "The Signal \u2014 Emma's Warning",
-      "description": "Emma received Viktor's message. I have been treating survivors who escaped from the south \u2014 some of them described armed strangers moving through the villages, taking supplies. I need medicine stockpiled before they arrive.",
+      "title": "The Signal — Emma's Warning",
+      "description": "Emma received Viktor's message. I have been treating survivors who escaped from the south — some of them described armed strangers moving through the villages, taking supplies. I need medicine stockpiled before they arrive.",
       "acceptMessage": "Whatever medical supplies you can find. If they come here I want to be ready.",
       "rewardMessage": "The station is as ready as it can be. God help us.",
       "type": 0,
@@ -5135,8 +5182,8 @@
     {
       "id": "quest_155",
       "traderId": "trader_003",
-      "title": "The Signal \u2014 Defend the Church",
-      "description": "I have word a hostile group's advance is moving through Kabanino. They always drive infected ahead \u2014 using the horde as a distraction. I cannot leave my patients. I need someone to hold the perimeter and clear the infected before they overwhelm the church.",
+      "title": "The Signal — Defend the Church",
+      "description": "I have word a hostile group's advance is moving through Kabanino. They always drive infected ahead — using the horde as a distraction. I cannot leave my patients. I need someone to hold the perimeter and clear the infected before they overwhelm the church.",
       "acceptMessage": "Clear the infected from around the church. Twenty-five of them, pushed ahead by whoever is moving through. Do not engage anyone who looks like a survivor.",
       "rewardMessage": "They have passed us by. For now. The Collector's intelligence was right.",
       "type": 1,
@@ -5146,7 +5193,7 @@
         {
           "entityClassName": "Zmb",
           "requiredAmount": 25,
-          "description": "Hold the church perimeter \u2014 clear 25 infected"
+          "description": "Hold the church perimeter — clear 25 infected"
         }
       ],
       "rewards": [
@@ -5165,12 +5212,13 @@
       ],
       "prerequisiteQuestIds": [
         "quest_154"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_156",
       "traderId": "trader_003",
-      "title": "The Signal \u2014 Emma's Report",
+      "title": "The Signal — Emma's Report",
       "description": "I have information about the hostile group that the others need. She treated one of their people who got separated and left for dead. I need this delivered to Viktor and Fisher.",
       "acceptMessage": "Tell Viktor what I have told you. And then tell Fisher. They need to know.",
       "rewardMessage": "Go now. Every hour matters.",
@@ -5238,7 +5286,7 @@
       "traderId": "trader_003",
       "title": "Vitamin Stores",
       "description": "Nutritional deficiencies are becoming a serious problem at the aid station. I need vitamin supplements.",
-      "acceptMessage": "Six vitamin bottles. Scurvy is not a medieval problem \u2014 it is very much a current one.",
+      "acceptMessage": "Six vitamin bottles. Scurvy is not a medieval problem — it is very much a current one.",
       "rewardMessage": "These will prevent a great deal of suffering. Simple things matter.",
       "type": 0,
       "repeatable": true,
@@ -5289,7 +5337,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_160",
@@ -5318,7 +5367,8 @@
           "amount": 1
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_161",
@@ -5381,7 +5431,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_163",
@@ -5410,7 +5461,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_164",
@@ -5451,7 +5503,7 @@
       "traderId": "trader_004",
       "title": "Bait Supply",
       "description": "I need bait to keep the lines running. Worms and maggots work best but he'll take what I can get.",
-      "acceptMessage": "Ten worms or maggots. Don't make a face \u2014 they catch fish.",
+      "acceptMessage": "Ten worms or maggots. Don't make a face — they catch fish.",
       "rewardMessage": "Lines are baited. The lake will provide.",
       "type": 0,
       "repeatable": true,
@@ -5541,7 +5593,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_168",
@@ -5570,7 +5623,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_169",
@@ -5599,7 +5653,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_170",
@@ -5628,13 +5683,14 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_171",
       "traderId": "trader_004",
       "title": "Deer for the Lake Camp",
-      "description": "The lake camp is short on meat. I need deer \u2014 the forest south of the lake has a good population if you know where to look.",
+      "description": "The lake camp is short on meat. I need deer — the forest south of the lake has a good population if you know where to look.",
       "acceptMessage": "Three deer. Bring them in and I will see you paid fairly.",
       "rewardMessage": "Camp eats tonight. Fair's fair.",
       "type": 1,
@@ -5657,14 +5713,15 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_172",
       "traderId": "trader_004",
       "title": "Reindeer Run",
       "description": "Fisher spotted a reindeer herd moving south along the lake shore. I want them taken before they move on.",
-      "acceptMessage": "Three reindeer. Don't wait \u2014 herds don't stay.",
+      "acceptMessage": "Three reindeer. Don't wait — herds don't stay.",
       "rewardMessage": "That is a winter's worth of meat. You did good.",
       "type": 1,
       "repeatable": false,
@@ -5686,14 +5743,15 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_173",
       "traderId": "trader_004",
       "title": "Fox Pelts",
       "description": "Fisher trades fox pelts north for supplies I can't get any other way. I need a consistent supply.",
-      "acceptMessage": "Four foxes. Clean kills please \u2014 damaged pelts don't trade well.",
+      "acceptMessage": "Four foxes. Clean kills please — damaged pelts don't trade well.",
       "rewardMessage": "These will fetch a fair price. You've earned your cut.",
       "type": 1,
       "repeatable": true,
@@ -5715,7 +5773,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_174",
@@ -5744,7 +5803,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_175",
@@ -5865,14 +5925,15 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_179",
       "traderId": "trader_004",
-      "title": "The Signal \u2014 Coastal Intel",
-      "description": "Fisher received The Collector's intelligence. He recognised the group immediately \u2014 they came through the coast six weeks ago and took three of my boats. I have left a pair of binoculars at the lighthouse at Rify. Get there, watch the eastern shore approach for signs of movement, and report back what you see.",
-      "acceptMessage": "Binoculars are stashed at the Rify lighthouse. Get up there and watch the eastern shore. Take your time \u2014 I need a proper read on what's moving.",
+      "title": "The Signal — Coastal Intel",
+      "description": "Fisher received The Collector's intelligence. He recognised the group immediately — they came through the coast six weeks ago and took three of my boats. I have left a pair of binoculars at the lighthouse at Rify. Get there, watch the eastern shore approach for signs of movement, and report back what you see.",
+      "acceptMessage": "Binoculars are stashed at the Rify lighthouse. Get up there and watch the eastern shore. Take your time — I need a proper read on what's moving.",
       "rewardMessage": "Same route. They are predictable. That is their mistake.",
       "type": 1,
       "repeatable": false,
@@ -5902,12 +5963,13 @@
         13989.0,
         32.38,
         11221.1
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_180",
       "traderId": "trader_004",
-      "title": "The Signal \u2014 Cut the Route",
+      "title": "The Signal — Cut the Route",
       "description": "I want the hostile group's supply line disrupted at the coast. Clear the infected they are driving ahead of them and slow their advance.",
       "acceptMessage": "Thirty infected on the eastern approach. Every one of them slows the hostile group down.",
       "rewardMessage": "That buys Viktor the time I need. Good work.",
@@ -5918,7 +5980,7 @@
         {
           "entityClassName": "Zmb",
           "requiredAmount": 30,
-          "description": "Cut the supply route \u2014 clear 30 infected"
+          "description": "Cut the supply route — clear 30 infected"
         }
       ],
       "rewards": [
@@ -5933,13 +5995,14 @@
       ],
       "prerequisiteQuestIds": [
         "quest_179"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_181",
       "traderId": "trader_004",
-      "title": "The Signal \u2014 Fisher's Stand",
-      "description": "The hostile group's advance has been slowed. Viktor, Emma, and The Collector are holding their positions. I need the lake supply route kept open for the final resupply push \u2014 his contribution to the alliance.",
+      "title": "The Signal — Fisher's Stand",
+      "description": "The hostile group's advance has been slowed. Viktor, Emma, and The Collector are holding their positions. I need the lake supply route kept open for the final resupply push — his contribution to the alliance.",
       "acceptMessage": "Keep the lake route clear. Emma needs these supplies and sI need them now.",
       "rewardMessage": "Done. The alliance holds. We all made it through this one.",
       "type": 2,
@@ -5983,7 +6046,7 @@
       "title": "Medical for the Shore",
       "description": "My camp has been dealing with injuries from the water and from the work. I need basic medical supplies.",
       "acceptMessage": "Bandages, painkillers, tetracycline. The basics.",
-      "rewardMessage": "This will do. My people work hard \u2014 they need proper care.",
+      "rewardMessage": "This will do. My people work hard — they need proper care.",
       "type": 0,
       "repeatable": true,
       "cooldownHours": 48,
@@ -6043,7 +6106,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_184",
@@ -6126,7 +6190,7 @@
       "id": "quest_186",
       "traderId": "trader_004",
       "title": "Knife for the Work",
-      "description": "My crews use knives constantly \u2014 gutting fish, cutting rope, basic camp work. I need to keep the supply up.",
+      "description": "My crews use knives constantly — gutting fish, cutting rope, basic camp work. I need to keep the supply up.",
       "acceptMessage": "Four knives. Any kind that holds an edge.",
       "rewardMessage": "Good steel. These will last.",
       "type": 0,
@@ -6162,7 +6226,7 @@
       "title": "Goat Roundup",
       "description": "Feral goats have moved into the camp perimeter near the lake. I do not share space with goats.",
       "acceptMessage": "Five goats. This is not a negotiation.",
-      "rewardMessage": "Perimeter is clear. I do not tolerate intruders \u2014 animal or otherwise.",
+      "rewardMessage": "Perimeter is clear. I do not tolerate intruders — animal or otherwise.",
       "type": 1,
       "repeatable": true,
       "cooldownHours": 48,
@@ -6187,7 +6251,8 @@
           "amount": 4
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_188",
@@ -6216,7 +6281,8 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_189",
@@ -6284,7 +6350,7 @@
       "id": "quest_191",
       "traderId": "trader_004",
       "title": "Collector's Specimen",
-      "description": "The Collector has an unusual request for Fisher \u2014 she wants a specific type of fish bait for a study. I am forwarding the job.",
+      "description": "The Collector has an unusual request for Fisher — she wants a specific type of fish bait for a study. I am forwarding the job.",
       "acceptMessage": "Bone hooks and bone bait. The Collector wants them. Don't ask me why.",
       "rewardMessage": "She'll be happy with those. Strange woman but she pays.",
       "type": 0,
@@ -6341,7 +6407,8 @@
           "amount": 3
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_193",
@@ -6410,7 +6477,7 @@
       "id": "quest_195",
       "traderId": "trader_004",
       "title": "Shore Run",
-      "description": "I need supplies moved along the coast to a waypoint. I do not send his own people on this run \u2014 the east road is too hot right now.",
+      "description": "I need supplies moved along the coast to a waypoint. I do not send his own people on this run — the east road is too hot right now.",
       "acceptMessage": "Get these ropes and planks to the waypoint at the eastern shore. You will know the place.",
       "rewardMessage": "Waypoint is stocked. My people can move again.",
       "type": 0,
@@ -6467,13 +6534,14 @@
           "amount": 2
         }
       ],
-      "prerequisiteQuestIds": []
+      "prerequisiteQuestIds": [],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_197",
       "traderId": "trader_001",
-      "title": "After the Signal \u2014 Viktor's Assessment",
-      "description": "The hostile group moved on. I am not celebrating \u2014 he knows they will be back. He wants a full resupply done before the next threat arrives.",
+      "title": "After the Signal — Viktor's Assessment",
+      "description": "The hostile group moved on. I am not celebrating — he knows they will be back. He wants a full resupply done before the next threat arrives.",
       "acceptMessage": "Ammo, medical supplies, fuel. We rebuild now while we have time.",
       "rewardMessage": "We are stronger for having worked together. Remember that.",
       "type": 0,
@@ -6523,8 +6591,8 @@
     {
       "id": "quest_198",
       "traderId": "trader_002",
-      "title": "After the Signal \u2014 The Collector's Records",
-      "description": "I have been documenting everything. I believe the hostile group will return in greater numbers and I want the record complete before they do. They left infected behind as they withdrew \u2014 a deliberate tactic to slow pursuit. I need the area around the tower cleared so I can continue my work.",
+      "title": "After the Signal — The Collector's Records",
+      "description": "I have been documenting everything. I believe the hostile group will return in greater numbers and I want the record complete before they do. They left infected behind as they withdrew — a deliberate tactic to slow pursuit. I need the area around the tower cleared so I can continue my work.",
       "acceptMessage": "Twenty-five infected left behind by the retreating group. Clear them from the tower perimeter and the surrounding area.",
       "rewardMessage": "The record is complete. When they come back, we will be ready.",
       "type": 1,
@@ -6553,12 +6621,13 @@
       ],
       "prerequisiteQuestIds": [
         "quest_137"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_199",
       "traderId": "trader_003",
-      "title": "After the Signal \u2014 Emma's Vigil",
+      "title": "After the Signal — Emma's Vigil",
       "description": "I have been tending to survivors affected by the hostile group's passage. I need help keeping the aid station running through the aftermath.",
       "acceptMessage": "Whatever you can carry. The need does not stop when the immediate threat does.",
       "rewardMessage": "Every soul that walks through those doors deserves a chance. Thank you for helping give them that.",
@@ -6612,10 +6681,10 @@
     {
       "id": "quest_200",
       "traderId": "trader_004",
-      "title": "After the Signal \u2014 Fisher's Routes",
+      "title": "After the Signal — Fisher's Routes",
       "description": "With the immediate threat gone, I am reopening his supply routes. I need the coast cleared fully so my boats can run again.",
       "acceptMessage": "Twenty five infected on the full eastern shore route. Clear them and the coast is open again.",
-      "rewardMessage": "The routes are open. Trade flows. That is how you survive \u2014 not through fighting alone but through keeping things moving.",
+      "rewardMessage": "The routes are open. Trade flows. That is how you survive — not through fighting alone but through keeping things moving.",
       "type": 1,
       "repeatable": false,
       "cooldownHours": 0,
@@ -6623,7 +6692,7 @@
         {
           "entityClassName": "Zmb",
           "requiredAmount": 25,
-          "description": "Clear the full south shore route \u2014 25 infected"
+          "description": "Clear the full south shore route — 25 infected"
         }
       ],
       "rewards": [
@@ -6646,13 +6715,14 @@
       ],
       "prerequisiteQuestIds": [
         "quest_181"
-      ]
+      ],
+      "spawnKillTarget": true
     },
     {
       "id": "quest_201",
       "traderId": "trader_003",
       "title": "Eyes on the Airfield",
-      "description": "A supply helicopter has been trying to reach us for three days. The pilot won't land at NWAF without eyes on the airfield first \u2014 too many bad runs in the early weeks. I need someone to get to the top of the ATC tower and do a proper sweep of the field. If it's clear enough for a landing, the helicopter comes in and people here get supplies they desperately need.",
+      "description": "A supply helicopter has been trying to reach us for three days. The pilot won't land at NWAF without eyes on the airfield first — too many bad runs in the early weeks. I need someone to get to the top of the ATC tower and do a proper sweep of the field. If it's clear enough for a landing, the helicopter comes in and people here get supplies they desperately need.",
       "acceptMessage": "I have left binoculars at the base of the ATC tower for you. Get to the top, scan the airfield carefully, and hold the position for a full minute. The pilot needs confidence, not a quick glance.",
       "rewardMessage": "I can't believe they're gone. Thank you for trying. I'll send word to their families.",
       "type": 1,
@@ -6691,13 +6761,93 @@
       ],
       "prerequisiteQuestIds": [
         "quest_115"
-      ]
+      ],
+      "spawnKillTarget": true
+    },
+    {
+      "id": "quest_202",
+      "traderId": "trader_003",
+      "title": "A Page for the Living",
+      "description": "Sister Emma wants a simple record of the people who made it through the airfield run. Bring her clean paper so she can write the names down before the details fade.",
+      "type": 0,
+      "repeatable": false,
+      "cooldownHours": 0,
+      "objectives": [
+        {
+          "itemClassName": "Paper",
+          "requiredAmount": 1,
+          "description": "Bring 1x Paper for Emma's journal"
+        }
+      ],
+      "rewards": [
+        {
+          "itemClassName": "SalineBag",
+          "amount": 1
+        },
+        {
+          "itemClassName": "BandageDressing",
+          "amount": 2
+        }
+      ],
+      "rewardMessage": "The page is filled. Thank you. Some victories should be written down.",
+      "acceptMessage": "Bring me clean paper. Not for a report. For names.",
+      "journalStory": "Emma wrote each name slowly, as if rushing would make them less real. The paper was ordinary, creased at the edge and stained by rain, but by the time she finished it felt heavier than ammunition. This is what survived: names, routes, mistakes, and the small mercy of someone deciding to remember.",
+      "prerequisiteQuestIds": []
+    },
+    {
+      "id": "quest_203",
+      "traderId": "trader_002",
+      "title": "Nova Quest",
+      "description": "Teste de morte",
+      "type": 1,
+      "repeatable": false,
+      "cooldownHours": 0,
+      "objectives": [
+        {
+          "Targets": [
+            "BS_AH64D_Apache_Bluetiger"
+          ],
+          "requiredAmount": 1,
+          "description": "Apache Azul",
+          "entityClassName": "BS_AH64D_Apache_Bluetiger"
+        }
+      ],
+      "rewards": [
+        {
+          "itemClassName": "M4A1",
+          "amount": 1
+        }
+      ],
+      "rewardMessage": "Teste de morte",
+      "acceptMessage": "Teste aceito, mate-o!",
+      "journalStory": "Um teste",
+      "prerequisiteQuestIds": [],
+      "interactionObjectClassName": "WoodenCrate",
+      "interactionPosition": [
+        8072.378906,
+        455.491669,
+        9357.054688
+      ],
+      "interactionDistance": 3.0,
+      "spawnInteractionObject": true,
+      "spawnKillTarget": true
     }
   ],
   "Settings": {
-    "interactionDistance": 2.0,
+    "interactionDistance": 3.0,
     "showQuestMarkersOnMap": true,
     "notifyOnKillProgress": true,
-    "debugLogging": false
+    "EnableKillDebug": false,
+    "debugLogging": false,
+    "ActivateSucessSound": true,
+    "EnableQuestChatMessages": true,
+    "EnableQuestTraderPerformanceLogs": false,
+    "QuestTraderEventDebounceSeconds": 3,
+    "QuestTraderSaveDebounceSeconds": 10,
+    "QuestTraderMaxRpcItemsPerPacket": 50,
+    "QuestSaveDebounceSeconds": 15,
+    "QuestSaveMaxPlayersPerTick": 2,
+    "QuestFullBackupIntervalSeconds": 900,
+    "EnableKillTargetSpawning": true
   }
 }

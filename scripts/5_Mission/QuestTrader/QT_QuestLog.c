@@ -8,10 +8,13 @@
 
 class QT_QuestLogEntry
 {
+    string questId;
     string questTitle;
     string completedAt;
     string rewardSummary;
     int    runNumber;
+    string questDescription;
+    string objectiveSummary;
 }
 
 // ============================================================
@@ -124,7 +127,7 @@ class QT_QuestLog : UIScriptedMenu
     // --------------------------------------------------------
     override bool OnClick(Widget w, int x, int y, int button)
     {
-        if (w == m_closeBtn)      { Close(); return true; }
+        if (w == m_closeBtn)      { CloseLogSafely(); return true; }
         if (w == m_tabHistory)    { ShowTab(0); return true; }
         if (w == m_tabLeaderboard){ ShowTab(1); return true; }
         return false;
@@ -147,13 +150,73 @@ class QT_QuestLog : UIScriptedMenu
     private void ShowHistoryDetail(QT_QuestLogEntry e)
     {
         if (!m_detailText) return;
-        string txt = e.questTitle + "\n\n" + QT_L10n.T("LOG_COMPLETED") + ": " + e.completedAt + "\n" + QT_L10n.T("LOG_RUN") + " #" + e.runNumber + "\n\n" + QT_L10n.T("LOG_REWARDS_RECEIVED") + ":\n  " + e.rewardSummary;
+        string objectives = QT_FormatSummaryLines(e.objectiveSummary);
+        string rewards = QT_FormatSummaryLines(e.rewardSummary);
+        string txt = e.questTitle;
+        txt = txt + "\n\n";
+        txt = txt + e.questDescription;
+        txt = txt + "\n\n";
+        txt = txt + QT_L10n.T("LOG_COMPLETED");
+        txt = txt + ": ";
+        txt = txt + e.completedAt;
+        txt = txt + "\n";
+        txt = txt + QT_L10n.T("LOG_RUN");
+        txt = txt + " #";
+        txt = txt + e.runNumber.ToString();
+        txt = txt + "\n\n";
+        txt = txt + QT_L10n.T("MENU_OBJECTIVES");
+        txt = txt + ":\n";
+        txt = txt + objectives;
+        txt = txt + "\n";
+        txt = txt + QT_L10n.T("LOG_REWARDS_RECEIVED");
+        txt = txt + ":\n";
+        txt = txt + rewards;
         m_detailText.SetText(txt);
+    }
+
+    private string QT_FormatSummaryLines(string raw)
+    {
+        if (raw == "") return "  -";
+
+        TStringArray entries = new TStringArray();
+        raw.Split(";", entries);
+        string text = "";
+        foreach (string entry : entries)
+        {
+            string line = entry.Trim();
+            if (line == "") continue;
+            TStringArray fields = new TStringArray();
+            line.Split("|", fields);
+            if (fields.Count() >= 2)
+            {
+                string cls = fields[0].Trim();
+                string amt = fields[1].Trim();
+                if (fields.Count() >= 3 && fields[2].Trim() != "")
+                    line = fields[2].Trim() + " (" + amt + ")";
+                else
+                    line = amt + "x " + QT_L10n.ResolveText(cls);
+            }
+            if (text != "") text = text + "\n";
+            text = text + "  - " + QT_L10n.ResolveText(line);
+        }
+        if (text == "") text = "  -";
+        return text + "\n";
     }
 
     private void ShowTab(int tab)
     {
         if (m_historyPane)  m_historyPane.Show(tab == 0);
         if (m_leaderPane)   m_leaderPane.Show(tab == 1);
+    }
+
+    private void CloseLogSafely()
+    {
+        MissionGameplay mg = MissionGameplay.Cast(GetGame().GetMission());
+        if (mg)
+        {
+            mg.QT_CloseQuestLog();
+            return;
+        }
+        Close();
     }
 }
