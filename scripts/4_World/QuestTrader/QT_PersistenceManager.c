@@ -37,7 +37,7 @@ class QT_PersistenceManager
         if (uid == "" || !questMap) return false;
         EnsureSaveState();
 
-        string signature = BuildQuestMapSignature(questMap);
+        string signature = BuildLightSignature(questMap);
         if (s_lastSavedSignatures.Contains(uid) && s_lastSavedSignatures.Get(uid) == signature)
         {
             QT_Perf.Log("save skipped uid=" + uid + " reason=unchanged");
@@ -60,7 +60,7 @@ class QT_PersistenceManager
         if (!WritePlayer(uid, questMap))
             return false;
 
-        s_lastSavedSignatures.Set(uid, BuildQuestMapSignature(questMap));
+        s_lastSavedSignatures.Set(uid, BuildLightSignature(questMap));
         QT_Perf.Log("Player saved successfully uid=" + uid + " quests=" + questMap.Count().ToString());
         return true;
     }
@@ -199,6 +199,27 @@ class QT_PersistenceManager
         }
 
         return saveData;
+    }
+
+    // Lightweight dirty check - counts key state values instead of building
+    // a full string with all 220+ quest IDs. Avoids hundreds of allocations per save.
+    private static string BuildLightSignature(map<string, ref QT_PlayerQuestState> questMap)
+    {
+        if (!questMap) return "";
+        int activeCount = 0;
+        int completedCount = 0;
+        int totalProgress = 0;
+        int latestTimestamp = 0;
+        foreach (string questId, QT_PlayerQuestState qs : questMap)
+        {
+            if (!qs) continue;
+            if (qs.state == QT_QuestState.ACTIVE)     activeCount++;
+            if (qs.state == QT_QuestState.TURNED_IN)  completedCount++;
+            if (qs.completedTimestamp > latestTimestamp) latestTimestamp = qs.completedTimestamp;
+            if (qs.objectiveProgress)
+                foreach (int p : qs.objectiveProgress) totalProgress += p;
+        }
+        return activeCount.ToString() + ":" + completedCount.ToString() + ":" + totalProgress.ToString() + ":" + latestTimestamp.ToString();
     }
 
     private static string BuildQuestMapSignature(map<string, ref QT_PlayerQuestState> questMap)
