@@ -1004,6 +1004,15 @@ class QT_QuestManager
         bool isInfectedAlias = (entityClassName == "Zmb" || entityClassName == "ZombieBase" || entityClassName == "Infected" || entityClassName == "infected");
         if (isInfectedAlias)
         {
+            // Static cache - built once, reused for every spawn
+            if (!s_zmbClassCache || s_zmbClassCache.Count() == 0)
+                BuildZmbClassCache();
+            return s_zmbClassCache[Math.RandomInt(0, s_zmbClassCache.Count())];
+        }
+
+        // Legacy path kept for direct classname pass-through
+        if (false) // dead code - replaced by cached path above
+        {
             ref array<string> zmbClasses = new array<string>();
             zmbClasses.Insert("ZmbF_BlueCollarFat_Blue");
             zmbClasses.Insert("ZmbF_BlueCollarFat_Green");
@@ -1170,6 +1179,102 @@ class QT_QuestManager
         return entityClassName;
     }
 
+    // Cached zombie classname pool - built once on first use
+    private static ref array<string> s_zmbClassCache;
+
+    private static void BuildZmbClassCache()
+    {
+        s_zmbClassCache = new array<string>();
+        s_zmbClassCache.Insert("ZmbF_BlueCollarFat_Blue"); s_zmbClassCache.Insert("ZmbF_BlueCollarFat_Green");
+        s_zmbClassCache.Insert("ZmbF_BlueCollarFat_Red"); s_zmbClassCache.Insert("ZmbF_BlueCollarFat_White");
+        s_zmbClassCache.Insert("ZmbF_CitizenANormal_Beige"); s_zmbClassCache.Insert("ZmbF_CitizenANormal_Blue");
+        s_zmbClassCache.Insert("ZmbF_CitizenANormal_Brown"); s_zmbClassCache.Insert("ZmbF_CitizenBSkinny");
+        s_zmbClassCache.Insert("ZmbF_ClerkFat_Black"); s_zmbClassCache.Insert("ZmbF_ClerkFat_BluePattern");
+        s_zmbClassCache.Insert("ZmbF_ClerkFat_GreyPattern"); s_zmbClassCache.Insert("ZmbF_ClerkFat_White");
+        s_zmbClassCache.Insert("ZmbF_Clerk_Normal_Blue"); s_zmbClassCache.Insert("ZmbF_Clerk_Normal_Green");
+        s_zmbClassCache.Insert("ZmbF_Clerk_Normal_Red"); s_zmbClassCache.Insert("ZmbF_Clerk_Normal_White");
+        s_zmbClassCache.Insert("ZmbF_DoctorSkinny"); s_zmbClassCache.Insert("ZmbF_HikerSkinny_Blue");
+        s_zmbClassCache.Insert("ZmbF_HikerSkinny_Green"); s_zmbClassCache.Insert("ZmbF_HikerSkinny_Grey");
+        s_zmbClassCache.Insert("ZmbF_HikerSkinny_Red"); s_zmbClassCache.Insert("ZmbF_JoggerSkinny_Blue");
+        s_zmbClassCache.Insert("ZmbF_JoggerSkinny_Brown"); s_zmbClassCache.Insert("ZmbF_JoggerSkinny_Green");
+        s_zmbClassCache.Insert("ZmbF_JoggerSkinny_Red"); s_zmbClassCache.Insert("ZmbF_JournalistNormal_Blue");
+        s_zmbClassCache.Insert("ZmbF_JournalistNormal_Green"); s_zmbClassCache.Insert("ZmbF_JournalistNormal_Red");
+        s_zmbClassCache.Insert("ZmbF_JournalistNormal_White"); s_zmbClassCache.Insert("ZmbF_MechanicNormal_Beige");
+        s_zmbClassCache.Insert("ZmbF_MechanicNormal_Green"); s_zmbClassCache.Insert("ZmbF_MechanicNormal_Grey");
+        s_zmbClassCache.Insert("ZmbF_MechanicNormal_Orange"); s_zmbClassCache.Insert("ZmbF_MilkMaidOld_Beige");
+        s_zmbClassCache.Insert("ZmbF_MilkMaidOld_Black"); s_zmbClassCache.Insert("ZmbF_MilkMaidOld_Green");
+        s_zmbClassCache.Insert("ZmbF_MilkMaidOld_Grey"); s_zmbClassCache.Insert("ZmbF_NurseFat");
+        s_zmbClassCache.Insert("ZmbF_ParamedicNormal_Blue"); s_zmbClassCache.Insert("ZmbF_ParamedicNormal_Green");
+        s_zmbClassCache.Insert("ZmbF_ParamedicNormal_Red"); s_zmbClassCache.Insert("ZmbF_PatientOld");
+        s_zmbClassCache.Insert("ZmbF_PoliceWomanNormal"); s_zmbClassCache.Insert("ZmbF_ShortSkirt_beige");
+        s_zmbClassCache.Insert("ZmbF_ShortSkirt_black"); s_zmbClassCache.Insert("ZmbF_ShortSkirt_brown");
+        s_zmbClassCache.Insert("ZmbF_ShortSkirt_checks"); s_zmbClassCache.Insert("ZmbF_ShortSkirt_green");
+        s_zmbClassCache.Insert("ZmbF_ShortSkirt_grey"); s_zmbClassCache.Insert("ZmbF_ShortSkirt_red");
+        s_zmbClassCache.Insert("ZmbF_ShortSkirt_stripes"); s_zmbClassCache.Insert("ZmbF_ShortSkirt_white");
+        s_zmbClassCache.Insert("ZmbF_ShortSkirt_yellow"); s_zmbClassCache.Insert("ZmbF_SkaterYoung_Brown");
+        s_zmbClassCache.Insert("ZmbF_SkaterYoung_Striped"); s_zmbClassCache.Insert("ZmbF_SkaterYoung_Violet");
+        s_zmbClassCache.Insert("ZmbF_SurvivorNormal_Blue"); s_zmbClassCache.Insert("ZmbF_SurvivorNormal_Orange");
+        s_zmbClassCache.Insert("ZmbF_SurvivorNormal_Red"); s_zmbClassCache.Insert("ZmbF_SurvivorNormal_White");
+        s_zmbClassCache.Insert("ZmbF_VillagerOld_Blue"); s_zmbClassCache.Insert("ZmbF_VillagerOld_Green");
+        s_zmbClassCache.Insert("ZmbF_VillagerOld_Red"); s_zmbClassCache.Insert("ZmbF_VillagerOld_White");
+        s_zmbClassCache.Insert("ZmbM_CitizenASkinny_Blue"); s_zmbClassCache.Insert("ZmbM_CitizenASkinny_Brown");
+        s_zmbClassCache.Insert("ZmbM_CitizenASkinny_Grey"); s_zmbClassCache.Insert("ZmbM_CitizenASkinny_Red");
+        s_zmbClassCache.Insert("ZmbM_CitizenBFat_Blue"); s_zmbClassCache.Insert("ZmbM_CitizenBFat_Green");
+        s_zmbClassCache.Insert("ZmbM_CitizenBFat_Red"); s_zmbClassCache.Insert("ZmbM_ClerkFat_Brown");
+        s_zmbClassCache.Insert("ZmbM_ClerkFat_Grey"); s_zmbClassCache.Insert("ZmbM_ClerkFat_Khaki");
+        s_zmbClassCache.Insert("ZmbM_ClerkFat_White"); s_zmbClassCache.Insert("ZmbM_CommercialPilotOld_Blue");
+        s_zmbClassCache.Insert("ZmbM_CommercialPilotOld_Brown"); s_zmbClassCache.Insert("ZmbM_CommercialPilotOld_Grey");
+        s_zmbClassCache.Insert("ZmbM_CommercialPilotOld_Olive"); s_zmbClassCache.Insert("ZmbM_ConstrWorkerNormal_Beige");
+        s_zmbClassCache.Insert("ZmbM_ConstrWorkerNormal_Black"); s_zmbClassCache.Insert("ZmbM_ConstrWorkerNormal_Green");
+        s_zmbClassCache.Insert("ZmbM_ConstrWorkerNormal_Grey"); s_zmbClassCache.Insert("ZmbM_DoctorFat");
+        s_zmbClassCache.Insert("ZmbM_FarmerFat_Beige"); s_zmbClassCache.Insert("ZmbM_FarmerFat_Blue");
+        s_zmbClassCache.Insert("ZmbM_FarmerFat_Brown"); s_zmbClassCache.Insert("ZmbM_FarmerFat_Green");
+        s_zmbClassCache.Insert("ZmbM_FirefighterNormal"); s_zmbClassCache.Insert("ZmbM_FishermanOld_Blue");
+        s_zmbClassCache.Insert("ZmbM_FishermanOld_Green"); s_zmbClassCache.Insert("ZmbM_FishermanOld_Grey");
+        s_zmbClassCache.Insert("ZmbM_FishermanOld_Red"); s_zmbClassCache.Insert("ZmbM_HandymanNormal_Beige");
+        s_zmbClassCache.Insert("ZmbM_HandymanNormal_Blue"); s_zmbClassCache.Insert("ZmbM_HandymanNormal_Green");
+        s_zmbClassCache.Insert("ZmbM_HandymanNormal_Grey"); s_zmbClassCache.Insert("ZmbM_HandymanNormal_White");
+        s_zmbClassCache.Insert("ZmbM_HeavyIndustryWorker"); s_zmbClassCache.Insert("ZmbM_HermitSkinny_Beige");
+        s_zmbClassCache.Insert("ZmbM_HermitSkinny_Black"); s_zmbClassCache.Insert("ZmbM_HermitSkinny_Green");
+        s_zmbClassCache.Insert("ZmbM_HermitSkinny_Red"); s_zmbClassCache.Insert("ZmbM_HikerSkinny_Blue");
+        s_zmbClassCache.Insert("ZmbM_HikerSkinny_Green"); s_zmbClassCache.Insert("ZmbM_HikerSkinny_Yellow");
+        s_zmbClassCache.Insert("ZmbM_HunterOld_Autumn"); s_zmbClassCache.Insert("ZmbM_HunterOld_Spring");
+        s_zmbClassCache.Insert("ZmbM_HunterOld_Summer"); s_zmbClassCache.Insert("ZmbM_HunterOld_Winter");
+        s_zmbClassCache.Insert("ZmbM_Jacket_beige"); s_zmbClassCache.Insert("ZmbM_Jacket_black");
+        s_zmbClassCache.Insert("ZmbM_Jacket_blue"); s_zmbClassCache.Insert("ZmbM_Jacket_bluechecks");
+        s_zmbClassCache.Insert("ZmbM_Jacket_brown"); s_zmbClassCache.Insert("ZmbM_Jacket_greenchecks");
+        s_zmbClassCache.Insert("ZmbM_Jacket_grey"); s_zmbClassCache.Insert("ZmbM_Jacket_khaki");
+        s_zmbClassCache.Insert("ZmbM_Jacket_magenta"); s_zmbClassCache.Insert("ZmbM_Jacket_stripes");
+        s_zmbClassCache.Insert("ZmbM_JoggerSkinny_Blue"); s_zmbClassCache.Insert("ZmbM_JoggerSkinny_Green");
+        s_zmbClassCache.Insert("ZmbM_JoggerSkinny_Red"); s_zmbClassCache.Insert("ZmbM_JournalistSkinny");
+        s_zmbClassCache.Insert("ZmbM_MechanicSkinny_Blue"); s_zmbClassCache.Insert("ZmbM_MechanicSkinny_Green");
+        s_zmbClassCache.Insert("ZmbM_MechanicSkinny_Grey"); s_zmbClassCache.Insert("ZmbM_MechanicSkinny_Red");
+        s_zmbClassCache.Insert("ZmbM_MotobikerFat_Beige"); s_zmbClassCache.Insert("ZmbM_MotobikerFat_Black");
+        s_zmbClassCache.Insert("ZmbM_MotobikerFat_Blue"); s_zmbClassCache.Insert("ZmbM_OffshoreWorker_Green");
+        s_zmbClassCache.Insert("ZmbM_OffshoreWorker_Orange"); s_zmbClassCache.Insert("ZmbM_OffshoreWorker_Red");
+        s_zmbClassCache.Insert("ZmbM_OffshoreWorker_Yellow"); s_zmbClassCache.Insert("ZmbM_ParamedicNormal_Black");
+        s_zmbClassCache.Insert("ZmbM_ParamedicNormal_Blue"); s_zmbClassCache.Insert("ZmbM_ParamedicNormal_Green");
+        s_zmbClassCache.Insert("ZmbM_ParamedicNormal_Red"); s_zmbClassCache.Insert("ZmbM_PatientSkinny");
+        s_zmbClassCache.Insert("ZmbM_PatrolNormal_Autumn"); s_zmbClassCache.Insert("ZmbM_PatrolNormal_Flat");
+        s_zmbClassCache.Insert("ZmbM_PatrolNormal_PautRev"); s_zmbClassCache.Insert("ZmbM_PatrolNormal_Summer");
+        s_zmbClassCache.Insert("ZmbM_PolicemanFat"); s_zmbClassCache.Insert("ZmbM_PolicemanSpecForce");
+        s_zmbClassCache.Insert("ZmbM_PrisonerSkinny"); s_zmbClassCache.Insert("ZmbM_SkaterYoung_Blue");
+        s_zmbClassCache.Insert("ZmbM_SkaterYoung_Brown"); s_zmbClassCache.Insert("ZmbM_SkaterYoung_Green");
+        s_zmbClassCache.Insert("ZmbM_SkaterYoung_Grey"); s_zmbClassCache.Insert("ZmbM_SoldierNormal");
+        s_zmbClassCache.Insert("ZmbM_VillagerOld_Blue"); s_zmbClassCache.Insert("ZmbM_VillagerOld_Green");
+        s_zmbClassCache.Insert("ZmbM_VillagerOld_White"); s_zmbClassCache.Insert("ZmbM_priestPopSkinny");
+        s_zmbClassCache.Insert("ZmbM_usSoldier_normal_Desert"); s_zmbClassCache.Insert("ZmbM_usSoldier_normal_Woodland");
+    }
+
+    // Returns true if the classname is a ManType entity (infected/player subclass)
+    // ManType cannot use spawnOnGround=true - must use false + manual Y position
+    private static bool IsManTypeEntity(string className)
+    {
+        if (className.Length() < 4) return false;
+        string prefix4 = className.Substring(0, 4);
+        return (prefix4 == "ZmbM" || prefix4 == "ZmbF" || prefix4 == "Surv" || prefix4 == "Dayo");
+    }
+
     private void SpawnQuestEntities(PlayerBase player, QT_QuestDef def)
     {
         string uid = player.GetIdentity().GetId();
@@ -1250,7 +1355,16 @@ class QT_QuestManager
                     }
                 }
 
-                Object spawned = GetGame().CreateObject(ResolveSpawnClass(obj.entityClassName), spawnPos, false, true);
+                string resolvedClass = ResolveSpawnClass(obj.entityClassName);
+                bool isManType = IsManTypeEntity(resolvedClass);
+                // ManType entities (infected) must use spawnOnGround=false to avoid
+                // "ManType must inherit from DayZAnimalType" engine error.
+                // Animals use spawnOnGround=true for correct AI and physics init,
+                // but we do NOT register them with the AI world population counter
+                // by using CreateObject instead of CreateObjectEx.
+                if (isManType)
+                    spawnPos[1] = GetGame().SurfaceY(spawnPos[0], spawnPos[2]) + 0.1;
+                Object spawned = GetGame().CreateObject(resolvedClass, spawnPos, false, !isManType);
                 if (spawned) spawnedEntities.Insert(spawned);
             }
 

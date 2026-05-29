@@ -14,7 +14,7 @@ modded class PlayerBase
     private string m_qt_lastInventoryQuestSignature = "";
     private string m_qt_lastReadyInventoryQuestSignature = "";
     private bool m_qt_inventorySignatureInitialised = false;
-    private static const float QT_INVENTORY_QUEST_INTERVAL = 5.0;
+    private static const float QT_INVENTORY_QUEST_INTERVAL = 10.0; // Increased from 5s - EnumerateInventory is expensive
 
     override void OnConnect()
     {
@@ -41,14 +41,18 @@ modded class PlayerBase
     override void EEHitBy(TotalDamageResult damageResult, int damageType, EntityAI source,
                            int component, string dmgZone, string ammo, vector modelPos, float speedCoef)
     {
-        QT_KillHelper.HandleHitBy(this, source);
+        // Guard against ExpansionAI bots and other non-player PlayerBase subclasses
+        if (GetGame().IsServer() && GetIdentity())
+            QT_KillHelper.HandleHitBy(this, source);
         super.EEHitBy(damageResult, damageType, source, component, dmgZone, ammo, modelPos, speedCoef);
     }
 
     override void EEKilled(Object killer)
     {
         super.EEKilled(killer);
-        QT_KillHelper.HandleKilled(this, killer, true);
+        // Guard against ExpansionAI bots and other non-player PlayerBase subclasses
+        if (GetGame().IsServer() && GetIdentity())
+            QT_KillHelper.HandleKilled(this, killer, true);
     }
 
     override void OnScheduledTick(float deltaTime)
@@ -56,17 +60,21 @@ modded class PlayerBase
         super.OnScheduledTick(deltaTime);
         if (GetGame().IsServer() && GetIdentity())
         {
+            // Skip inventory scanning entirely if player has no active collect/deliver quests
+            QT_QuestManager mgr = QT_QuestManager.GetInstance();
+            if (!mgr.HasActiveInventoryQuest(GetIdentity().GetId()))
+            {
+                m_qt_inventoryQuestTimer = 0;
+                m_qt_inventorySignatureInitialised = false;
+                m_qt_lastInventoryQuestSignature = "";
+                m_qt_lastReadyInventoryQuestSignature = "";
+                return;
+            }
+
             m_qt_inventoryQuestTimer += deltaTime;
             if (m_qt_inventoryQuestTimer >= QT_INVENTORY_QUEST_INTERVAL)
             {
                 m_qt_inventoryQuestTimer = 0;
-                QT_QuestManager mgr = QT_QuestManager.GetInstance();
-                if (!mgr.HasActiveInventoryQuest(GetIdentity().GetId()))
-                {
-                    m_qt_lastInventoryQuestSignature = "";
-                    m_qt_lastReadyInventoryQuestSignature = "";
-                    return;
-                }
                 string sig = mgr.BuildInventoryQuestSignature(this);
                 string readySig = mgr.BuildReadyInventoryQuestSignature(this);
                 if (!m_qt_inventorySignatureInitialised)

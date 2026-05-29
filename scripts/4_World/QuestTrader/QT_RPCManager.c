@@ -771,51 +771,19 @@ class QT_RPCManager
 
         QT_QuestManager.GetInstance().RefreshOnlinePlayersFromServer();
 
-        array<Man> players = new array<Man>();
+        // Single pass through online player infos - no need for triple iteration
         ref map<string, bool> sentAdmins = new map<string, bool>();
-
         ref array<ref QT_OnlinePlayerInfo> onlineInfos = new array<ref QT_OnlinePlayerInfo>();
         QT_QuestManager.GetInstance().GetOnlinePlayerInfos(onlineInfos);
+
         foreach (QT_OnlinePlayerInfo info : onlineInfos)
         {
             if (!info || !info.player || !info.player.GetIdentity()) continue;
             if (!IsQuestAdmin(info.player)) continue;
-            string infoKey = info.player.GetIdentity().GetPlainId();
-            if (infoKey == "") infoKey = info.player.GetIdentity().GetId();
-            if (sentAdmins.Contains(infoKey)) continue;
-
-            sentAdmins.Insert(infoKey, true);
+            string key = info.player.GetIdentity().GetId();
+            if (sentAdmins.Contains(key)) continue;
+            sentAdmins.Insert(key, true);
             SendAdminPlayerData(info.player);
-        }
-
-        GetGame().GetPlayers(players);
-
-        foreach (Man man : players)
-        {
-            PlayerBase pb = PlayerBase.Cast(man);
-            if (!pb || !pb.GetIdentity()) continue;
-            if (!IsQuestAdmin(pb)) continue;
-            string pbKey = pb.GetIdentity().GetPlainId();
-            if (pbKey == "") pbKey = pb.GetIdentity().GetId();
-            if (sentAdmins.Contains(pbKey)) continue;
-
-            sentAdmins.Insert(pbKey, true);
-            SendAdminPlayerData(pb);
-        }
-
-        players.Clear();
-        GetGame().GetWorld().GetPlayerList(players);
-        foreach (Man worldMan : players)
-        {
-            PlayerBase worldPlayer = PlayerBase.Cast(worldMan);
-            if (!worldPlayer || !worldPlayer.GetIdentity()) continue;
-            if (!IsQuestAdmin(worldPlayer)) continue;
-            string worldKey = worldPlayer.GetIdentity().GetPlainId();
-            if (worldKey == "") worldKey = worldPlayer.GetIdentity().GetId();
-            if (sentAdmins.Contains(worldKey)) continue;
-
-            sentAdmins.Insert(worldKey, true);
-            SendAdminPlayerData(worldPlayer);
         }
     }
 
